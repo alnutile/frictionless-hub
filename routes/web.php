@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\Admin\AiSettingsController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\AssistantController;
 use App\Http\Controllers\GuideController;
 use App\Http\Controllers\InitiativeController;
 use App\Http\Controllers\Initiatives\DimensionController;
@@ -55,13 +57,22 @@ Route::middleware(['auth'])->group(function () {
         Route::put('rating-items/{ratingItem}/rating', [RatingController::class, 'rate'])->name('rating-items.rate');
 
         Route::put('notes/{key}', [GuideController::class, 'updateNote'])->name('notes.update');
+
+        Route::post('assistant', [AssistantController::class, 'store'])->middleware('throttle:assistant')->name('assistant.store');
+        Route::delete('assistant', [AssistantController::class, 'destroy'])->name('assistant.destroy');
     });
+
+    Route::post('assistant', [AssistantController::class, 'store'])->middleware('throttle:assistant')->name('assistant.store');
+    Route::delete('assistant', [AssistantController::class, 'destroy'])->name('assistant.destroy');
 
     Route::middleware('can:admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('users', [UserController::class, 'index'])->name('users.index');
         Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::put('guide/{key}', [GuideController::class, 'update'])->name('guide.update');
         Route::delete('guide/{key}', [GuideController::class, 'destroy'])->name('guide.destroy');
+        Route::get('ai', [AiSettingsController::class, 'edit'])->name('ai.edit');
+        Route::put('ai', [AiSettingsController::class, 'update'])->name('ai.update');
+        Route::post('ai/test', [AiSettingsController::class, 'test'])->middleware('throttle:assistant')->name('ai.test');
     });
 });
 

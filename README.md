@@ -6,7 +6,7 @@ Stack: Laravel 12, Inertia 2 + React 19, Tailwind, and Laravel Boost (MCP). Loca
 
 ## What's built so far
 
-Step 1 (Discover) of the walkthrough: **Map the workflow**, **Log friction** (with a stage × dimension heatmap), **Story map** and **Rate the workflow**. There's also a docked **Guide** panel on every screen, an overview "ladder" of all 18 activities, and admin user and role management. See [docs/SPEC.md](docs/SPEC.md) for the full plan.
+Step 1 (Discover) of the walkthrough: **Map the workflow**, **Log friction** (with a stage × dimension heatmap), **Story map** and **Rate the workflow**. There's also a docked **Guide** panel on every screen with a context-aware **AI assistant** (OpenRouter, set up by an admin), an overview "ladder" of all 18 activities, and admin user and role management. See [docs/SPEC.md](docs/SPEC.md) for the full plan.
 
 ## Set up on a new machine
 
@@ -60,6 +60,10 @@ Both setup commands **rebuild the local database** with fresh seed data. Run the
 |---|---|
 | `make up` (rebuild with `docker compose build` if the Dockerfile changed) | `composer install && npm install` if lockfiles changed |
 | `make artisan cmd=migrate` | `php artisan migrate` |
+
+### AI assistant
+
+The Guide panel includes a chat that knows the current screen, its guide text and the initiative's data. To turn it on, sign in as an admin, open **Admin → AI assistant**, paste an [OpenRouter](https://openrouter.ai) key, choose a model, then click **Test connection**. The system prompt can be edited on the same page. The key is stored encrypted in the database, so nothing goes in `.env`.
 
 ### Production image
 

@@ -77,4 +77,20 @@ export interface GuidePayload {
     initiativeId: number | null;
     note: string | null;
     canEditNote: boolean;
+    assistant: AssistantPayload;
+}
+
+export interface AssistantMessage {
+    id: number;
+    role: 'user' | 'assistant';
+    content: string;
+    html: string | null;
+}
+
+export interface AssistantPayload {
+    configured: boolean;
+    canConfigure: boolean;
+    endpoint: string;
+    clearEndpoint: string;
+    messages: AssistantMessage[];
 }

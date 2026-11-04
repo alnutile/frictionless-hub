@@ -2,8 +2,10 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\AssistantMessage;
 use App\Models\Initiative;
 use App\Services\Guide;
+use App\Support\AiSettings;
 use App\Support\Walkthrough;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
@@ -90,6 +92,24 @@ class HandleInertiaRequests extends Middleware
                 ? $initiative->activityNotes()->where('activity_key', $key)->value('body')
                 : null,
             'canEditNote' => $initiative !== null && $request->user()->can('update', $initiative),
+            'assistant' => [
+                'configured' => AiSettings::isConfigured(),
+                'canConfigure' => $isAdmin,
+                'endpoint' => $initiative ? route('initiatives.assistant.store', $initiative) : route('assistant.store'),
+                'clearEndpoint' => $initiative ? route('initiatives.assistant.destroy', $initiative) : route('assistant.destroy'),
+                'messages' => AssistantMessage::conversation($request->user(), $initiative)
+                    ->latest('id')
+                    ->limit(30)
+                    ->get()
+                    ->reverse()
+                    ->values()
+                    ->map(fn (AssistantMessage $message) => [
+                        'id' => $message->id,
+                        'role' => $message->role,
+                        'content' => $message->content,
+                        'html' => $message->role === AssistantMessage::ROLE_ASSISTANT ? Guide::render($message->content) : null,
+                    ]),
+            ],
         ];
     }
 }

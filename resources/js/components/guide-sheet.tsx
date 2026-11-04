@@ -1,3 +1,4 @@
+import { AssistantChat } from '@/components/assistant-chat';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -126,6 +127,8 @@ function GuidePanel({ guide }: { guide: GuidePayload }) {
                 )}
 
                 {guide.initiativeId !== null && <AllSteps guide={guide} />}
+
+                <AssistantChat guide={guide} />
             </div>
         </>
     );

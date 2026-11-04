@@ -69,6 +69,17 @@ Never commit `.env`, and never copy it from another machine.
 5. Add a section to `Database\Seeders\LarkspurScenarioSeeder` (the fictional benchmark company) and a progress count in `InitiativeController::progress()`.
 6. Add Feature tests (endpoints) and a Browser journey test.
 
+## AI assistant
+
+- Built on **`laravel/ai`** (the official Laravel AI SDK), using its `openrouter` driver. The agent is `App\Ai\Agents\GuideAssistant`.
+- **Admin → AI assistant** (`/admin/ai`) stores the OpenRouter key, model and system prompt in the `settings` table (every value encrypted at rest). The key is never sent to the browser; the page only shows `••••` plus the last four characters. `App\Support\AiSettings::applyToRuntime()` loads it into config on each request. No `.env` entry is needed.
+- The default system prompt is `resources/prompts/assistant.md` (original wording). An edited prompt overrides it; saving the default, or an empty prompt, goes back to the file.
+- On every message, `App\Services\AssistantContext::build()` assembles the context: who's asking (role, whether they can edit), the walkthrough with the current screen marked, the current guide text, the initiative's data (stages and tools, friction points, story map, rating averages) and the team's notes. It's capped at 24k characters. **When a new activity ships, add its data to the context builder.**
+- `POST initiatives/{initiative}/assistant` (and `POST /assistant` on the initiatives list) streams server-sent events: one JSON object per `data:` line (`text_delta`, `error`, …), then `data: [DONE]`. Provider failures become a readable `error` event. The browser reads the stream with `resources/js/lib/assistant-stream.ts`.
+- Conversations are saved in `assistant_messages`, private to each user and separate per initiative. The last 20 messages are replayed to the model, and the panel shows the last 30. Replies are rendered as markdown on the server (`Guide::render`, raw HTML stripped). Requests are limited to 20 per minute per user (`throttle:assistant`).
+- Tests never call a real provider. Use `GuideAssistant::fake([...])` and `GuideAssistant::assertPrompted(fn ($prompt) => …)`; `$prompt->agent->instructions()` exposes the full system prompt plus context.
+- Planned: tools so the assistant can add data and write summaries, each confirmed by the user.
+
 ## Roles
 
 `admin` manages everything, including guide text and user roles. `facilitator` creates and manages their own initiatives. `viewer` is read-only, but can add their own ratings. The first registered user becomes admin.
