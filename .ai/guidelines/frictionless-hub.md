@@ -12,20 +12,44 @@ A Laravel 12 + Inertia 2 + React 19 app for running a developer-experience progr
 - The code provides generic, configurable tools; admins enter their own content.
 - Guide text in `resources/guide/*.md` and the Larkspur scenario are original writing. Keep any new content original.
 
-## Setup and Composer scripts
+## "Set this up on my computer" (procedure for AI agents)
 
-| Command | What it does |
-|---|---|
-| `composer setup` | First run on a machine. Runs `composer install`, creates `.env` from `.env.example` only if it's missing, generates `APP_KEY`, creates `database/database.sqlite`, runs `migrate:fresh --seed` (**wipes the local DB**), then `npm install` and `npm run build`. |
-| `composer run dev` | Server, queue, logs (pail) and Vite together. Serves http://localhost:8000. |
-| `composer test` | Unit + Feature suites in parallel (Pest). |
-| `composer test:browser` | Browser suite (Pest browser plugin, Playwright). Needs `npx playwright install chromium` once per machine and built assets. |
-| `composer test:all` | Both of the above. |
-| `composer lint` | `pint --test`, `prettier --check`, `eslint`, `tsc --noEmit`. Read-only. |
+Follow these steps in order, and report each result to the user.
 
-- `.env` is git-ignored and never copied between machines. `.env.example` holds every non-secret default (SQLite, `APP_NAME="Frictionless Hub"`).
-- After `git pull`: run `composer install && npm install` if lockfiles changed, `php artisan migrate` if there are new migrations, then `npm run build` (or keep `composer run dev` running).
-- Feature tests that assert Inertia components need a current Vite build. A new page that's missing from the build fails with "Not a valid Inertia response".
+1. **Check prerequisites.** Run `docker compose version` and `make --version`.
+   - Both work → **Docker path** (preferred; matches production).
+   - Otherwise check `php -v` (needs 8.4+), `composer -V` and `node -v` (22+) → **native path**.
+   - Neither → tell the user to install Docker Desktop or OrbStack (macOS/Windows) or Docker Engine (Linux), then stop.
+2. **Check ports** 8000, 5173, 5432 and 8025 (e.g. `lsof -iTCP -sTCP:LISTEN -P | grep -E ':(8000|5173|5432|8025) '`). If one is taken, prefix commands with `APP_PORT=`, `VITE_PORT=`, `FORWARD_DB_PORT=` or `FORWARD_MAILPIT_DASHBOARD_PORT=`.
+3. **Run setup.**
+   - Docker: `make setup`. This builds images, starts Postgres/Redis/Mailpit/app/queue/vite, runs `composer install` in the container, creates `.env` if missing, generates `APP_KEY`, runs `migrate:fresh --seed` and builds assets.
+   - Native: `composer setup` (SQLite).
+   - Either one **wipes the local database**. On a machine that already has data, ask before running it.
+4. **Verify.** `curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/up` should print `200`. Then run `make test` (or `composer test`) and confirm it passes.
+5. **Hand over.** Open http://localhost:8000 and sign in as `priya@larkspur.test` with password `password` (the facilitator who owns the Larkspur benchmark initiative). Admin is `admin@example.com`.
+
+Never commit `.env`, and never copy it from another machine.
+
+## Commands
+
+| Docker (`make …`) | Native (`composer …`) | What it does |
+|---|---|---|
+| `setup` | `setup` | First-run setup (see above). Wipes the local DB |
+| `up` / `down` / `destroy` | `run dev` | Start / stop / stop and delete volumes. Native `dev` runs server, queue, pail and Vite |
+| `fresh` | `php artisan migrate:fresh --seed` | Reset to demo data |
+| `test` | `test` | Unit + Feature, SQLite in memory |
+| `test-pgsql` | n/a | Unit + Feature against the Postgres `testing` database |
+| n/a | `test:browser` | Browser suite. Runs natively and in CI (needs `npx playwright install chromium` once), not inside the app container |
+| `lint` | `lint` | pint, prettier, eslint, tsc (read-only checks) |
+| `prod-build` / `prod-up` / `prod-smoke` / `prod-down` | n/a | Build and run the production image like Kubernetes (migrate job, web, worker, scheduler) on :8090 |
+| `shell`, `artisan cmd="…"`, `logs` | n/a | Utilities |
+
+## Docker layout
+
+- `Dockerfile` has targets `development` (source bind-mounted, host UID/GID mapped, `sockets` extension for Pest browser) and `production` (non-root uid 33, port 8080, OPcache on, caches built at startup, no migrations at startup). Base image `serversideup/php:8.4-fpm-nginx-vX`, pinned.
+- `compose.yaml` is the dev stack. Values under `environment` override `.env`, because Laravel never overwrites real environment variables. The Vite service keeps its Linux `node_modules` in a named volume, and `VITE_IN_DOCKER=true` switches `vite.config.js` to listen on 0.0.0.0 with HMR via localhost.
+- `compose.production.yaml` mirrors the Kubernetes topology. `docs/DEPLOYMENT.md` documents the runtime contract (env vars, roles, probes).
+- **Test isolation:** Docker exposes container env vars through `$_SERVER`, which Laravel reads first. `phpunit.xml` / `phpunit.pgsql.xml` therefore set both `<env force="true">` and `<server>`, and `tests/TestCase.php` aborts if the database isn't `:memory:` or `testing`. Don't remove either safeguard. Without them, a test run once wiped the dev database.
 
 ## Testing conventions
 
@@ -34,7 +58,7 @@ A Laravel 12 + Inertia 2 + React 19 app for running a developer-experience progr
 - `tests/Feature`: every endpoint. Cover auth, role permissions, isolation between initiatives (another initiative's record returns **404**), validation messages and saved data.
 - `tests/Browser`: user journeys. Select elements with `@data-test` hooks, never visible text, because the docked guide panel repeats many page titles. Browser steps time out after 10s (`tests/Pest.php`).
 - `BenchmarkScenarioTest` and `tests/Browser/SmokeTest.php` iterate over `App\Support\Walkthrough`, so a new activity is smoke-tested as soon as it has a route.
-- CI (`.github/workflows/ci.yml`) runs on every push: lint, Unit+Feature with coverage (fails below 85%), and Browser (uploads failure screenshots).
+- CI (`.github/workflows/ci.yml`) runs on every push: lint; Unit+Feature on SQLite (with coverage, fails below 85%) and on Postgres; Browser (uploads failure screenshots); and a production-image build plus smoke test.
 
 ## Adding a walkthrough activity
 

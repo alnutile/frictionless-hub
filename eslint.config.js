@@ -38,6 +38,15 @@ export default [
         },
     },
     {
+        // Build tooling at the project root runs in Node, not the browser.
+        files: ['*.config.js'],
+        languageOptions: {
+            globals: {
+                ...globals.node,
+            },
+        },
+    },
+    {
         ignores: ['vendor', 'node_modules', 'public', 'bootstrap/ssr', 'tailwind.config.js'],
     },
     prettier, // Turn off all rules that might conflict with Prettier

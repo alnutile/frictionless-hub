@@ -1,0 +1,100 @@
+# Local development stack: `make setup` once, then `make up`.
+# App: http://localhost:8000   Mail: http://localhost:8025   Vite: http://localhost:5173
+#
+# Values set under `environment` override .env (Laravel never overwrites real env vars),
+# so the same .env works for both the Docker and the native SQLite setup.
+
+x-app-env: &app-env
+    APP_ENV: local
+    APP_URL: http://localhost:8000
+    DB_CONNECTION: pgsql
+    DB_HOST: pgsql
+    DB_PORT: 5432
+    DB_DATABASE: frictionless
+    DB_USERNAME: frictionless
+    DB_PASSWORD: secret
+    REDIS_HOST: redis
+    CACHE_STORE: redis
+    SESSION_DRIVER: redis
+    QUEUE_CONNECTION: redis
+    MAIL_MAILER: smtp
+    MAIL_HOST: mailpit
+    MAIL_PORT: 1025
+
+x-app: &app
+    build:
+        context: .
+        target: development
+        args:
+            USER_ID: ${UID:-1000}
+            GROUP_ID: ${GID:-1000}
+    image: frictionless-hub:dev
+    volumes:
+        - .:/var/www/html
+    environment: *app-env
+    depends_on:
+        pgsql:
+            condition: service_healthy
+        redis:
+            condition: service_healthy
+
+services:
+    app:
+        <<: *app
+        ports:
+            - '${APP_PORT:-8000}:8080'
+
+    queue:
+        <<: *app
+        command: ['php', '/var/www/html/artisan', 'queue:work', '--tries=3']
+        healthcheck:
+            test: ['CMD', 'healthcheck-queue']
+            start_period: 10s
+
+    vite:
+        image: node:22-bookworm-slim
+        working_dir: /app
+        command: sh -c "npm ci --no-audit --no-fund && npm run dev"
+        environment:
+            VITE_IN_DOCKER: 'true'
+        ports:
+            - '${VITE_PORT:-5173}:5173'
+        volumes:
+            - .:/app
+            # Linux-built node_modules stay in the container, separate from the host's.
+            - node_modules:/app/node_modules
+
+    pgsql:
+        image: postgres:17-alpine
+        environment:
+            POSTGRES_DB: frictionless
+            POSTGRES_USER: frictionless
+            POSTGRES_PASSWORD: secret
+        ports:
+            - '${FORWARD_DB_PORT:-5432}:5432'
+        volumes:
+            - pgsql:/var/lib/postgresql/data
+            - ./docker/pgsql/create-testing-database.sql:/docker-entrypoint-initdb.d/10-create-testing-database.sql:ro
+        healthcheck:
+            test: ['CMD', 'pg_isready', '-U', 'frictionless', '-d', 'frictionless']
+            interval: 5s
+            retries: 10
+
+    redis:
+        image: redis:7-alpine
+        volumes:
+            - redis:/data
+        healthcheck:
+            test: ['CMD', 'redis-cli', 'ping']
+            interval: 5s
+            retries: 10
+
+    mailpit:
+        image: axllent/mailpit:latest
+        ports:
+            - '${FORWARD_MAILPIT_DASHBOARD_PORT:-8025}:8025'
+
+volumes:
+    pgsql:
+    redis:
+    node_modules:

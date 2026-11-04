@@ -1,0 +1,79 @@
+# Runs the production image the way Kubernetes will: separate web, worker and
+# scheduler processes from one image, plus a one-off migration job.
+#   make prod-up     build and start on http://localhost:8090
+#   make prod-down   stop and delete its data
+#
+# Uses throwaway credentials. Real deployments inject these from secrets.
+
+x-prod-env: &prod-env
+    APP_KEY: ${PROD_APP_KEY:-base64:bG9jYWwtc21va2UtdGVzdC1rZXktbm90LXNlY3JldCE=}
+    APP_URL: http://localhost:${PROD_PORT:-8090}
+    DB_CONNECTION: pgsql
+    DB_HOST: pgsql
+    DB_DATABASE: frictionless
+    DB_USERNAME: frictionless
+    DB_PASSWORD: secret
+    REDIS_HOST: redis
+    CACHE_STORE: redis
+    SESSION_DRIVER: redis
+    QUEUE_CONNECTION: redis
+    MAIL_MAILER: log
+
+x-prod: &prod
+    image: ${PROD_IMAGE:-frictionless-hub:production}
+    environment: *prod-env
+    depends_on:
+        pgsql:
+            condition: service_healthy
+        redis:
+            condition: service_healthy
+
+services:
+    migrate:
+        <<: *prod
+        command: ['php', '/var/www/html/artisan', 'migrate', '--force']
+        restart: 'no'
+
+    web:
+        <<: *prod
+        ports:
+            - '${PROD_PORT:-8090}:8080'
+        depends_on:
+            migrate:
+                condition: service_completed_successfully
+
+    worker:
+        <<: *prod
+        command: ['php', '/var/www/html/artisan', 'queue:work', '--tries=3', '--max-time=3600']
+        healthcheck:
+            test: ['CMD', 'healthcheck-queue']
+        depends_on:
+            migrate:
+                condition: service_completed_successfully
+
+    scheduler:
+        <<: *prod
+        command: ['php', '/var/www/html/artisan', 'schedule:work']
+        healthcheck:
+            test: ['CMD', 'healthcheck-schedule']
+        depends_on:
+            migrate:
+                condition: service_completed_successfully
+
+    pgsql:
+        image: postgres:17-alpine
+        environment:
+            POSTGRES_DB: frictionless
+            POSTGRES_USER: frictionless
+            POSTGRES_PASSWORD: secret
+        healthcheck:
+            test: ['CMD', 'pg_isready', '-U', 'frictionless', '-d', 'frictionless']
+            interval: 5s
+            retries: 10
+
+    redis:
+        image: redis:7-alpine
+        healthcheck:
+            test: ['CMD', 'redis-cli', 'ping']
+            interval: 5s
+            retries: 10

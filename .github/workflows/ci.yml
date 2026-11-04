@@ -50,8 +50,29 @@ jobs:
         run: npm run types
 
   tests:
-    name: Unit & feature tests
+    name: Unit & feature tests (${{ matrix.database }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        database: [sqlite, pgsql]
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: testing
+          POSTGRES_USER: frictionless
+          POSTGRES_PASSWORD: secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U frictionless -d testing"
+          --health-interval 5s
+          --health-retries 10
+    env:
+      DB_HOST: 127.0.0.1
+      DB_USERNAME: frictionless
+      DB_PASSWORD: secret
     steps:
       - uses: actions/checkout@v4
 
@@ -59,7 +80,7 @@ jobs:
         with:
           php-version: '8.4'
           tools: composer:v2
-          coverage: pcov
+          coverage: ${{ matrix.database == 'sqlite' && 'pcov' || 'none' }}
 
       - uses: actions/setup-node@v4
         with:
@@ -80,11 +101,16 @@ jobs:
           cp .env.example .env
           php artisan key:generate
 
-      - name: Run tests with coverage
+      - name: Run tests with coverage (SQLite)
+        if: matrix.database == 'sqlite'
         run: vendor/bin/pest --testsuite=Unit,Feature --parallel --coverage --min=85 --coverage-clover=coverage.xml
 
+      - name: Run tests (Postgres)
+        if: matrix.database == 'pgsql'
+        run: vendor/bin/pest --configuration=phpunit.pgsql.xml --testsuite=Unit,Feature
+
       - name: Upload coverage report
-        if: always()
+        if: always() && matrix.database == 'sqlite'
         uses: actions/upload-artifact@v4
         with:
           name: coverage
@@ -135,3 +161,37 @@ jobs:
           name: browser-screenshots
           path: tests/Browser/Screenshots
           if-no-files-found: ignore
+
+  image:
+    name: Production image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build production image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: production
+          tags: frictionless-hub:production
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run it like Kubernetes (migrate job, web, worker, scheduler) and smoke test
+        run: |
+          docker compose -f compose.production.yaml -p frictionless-prod up -d --wait web worker scheduler
+          curl -fsS -o /dev/null -w "/up     %{http_code}\n" http://localhost:8090/up
+          curl -fsS -o /dev/null -w "/login  %{http_code}\n" http://localhost:8090/login
+          test "$(docker compose -f compose.production.yaml -p frictionless-prod exec -T web id -u)" != "0"
+          docker compose -f compose.production.yaml -p frictionless-prod exec -T web php artisan db:seed --class=LarkspurScenarioSeeder --force
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose -f compose.production.yaml -p frictionless-prod logs
+
+      - name: Stop
+        if: always()
+        run: docker compose -f compose.production.yaml -p frictionless-prod down -v

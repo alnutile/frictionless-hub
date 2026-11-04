@@ -1,0 +1,27 @@
+# Keep the build context small and keep secrets and local state out of images.
+.git
+.github
+.env
+.env.*
+!.env.example
+node_modules
+vendor
+public/build
+public/hot
+public/storage
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/pail
+bootstrap/cache/*.php
+database/*.sqlite
+tests/Browser/Screenshots
+coverage.xml
+.phpunit.cache
+.DS_Store
+.idea
+.vscode
+.claude
+.codex
+.agents
