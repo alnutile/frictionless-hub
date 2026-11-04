@@ -93,7 +93,7 @@ export default function Friction(props: Props) {
                     <option value="none">No stage</option>
                 </NativeSelect>
                 {canManage && (
-                    <Button onClick={() => setEditing('new')}>
+                    <Button onClick={() => setEditing('new')} data-test="friction-open">
                         <Plus /> Log friction
                     </Button>
                 )}
@@ -390,6 +390,7 @@ function FrictionDialog({
                                     type="button"
                                     size="icon"
                                     variant={data.pain === String(n) ? 'default' : 'outline'}
+                                    data-test={`pain-${n}`}
                                     onClick={() => setData('pain', data.pain === String(n) ? '' : String(n))}
                                 >
                                     {n}
@@ -415,6 +416,7 @@ function FrictionDialog({
                                 {dimensions.map((d) => (
                                     <label key={d.id} className="flex items-center gap-2 text-sm">
                                         <Checkbox
+                                            data-test={`dimension-${d.id}`}
                                             checked={data.dimension_ids.includes(d.id)}
                                             onCheckedChange={(checked) => toggleDimension(d.id, checked === true)}
                                         />
@@ -429,7 +431,7 @@ function FrictionDialog({
                         <Button type="button" variant="ghost" onClick={onClose}>
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={processing}>
+                        <Button type="submit" disabled={processing} data-test="friction-submit">
                             {point ? 'Save' : 'Log friction'}
                         </Button>
                     </DialogFooter>

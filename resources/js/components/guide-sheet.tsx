@@ -55,11 +55,19 @@ export function GuideButton() {
 
     return (
         <>
-            <Button variant={open ? 'secondary' : 'outline'} size="sm" onClick={() => change(!open)} className="gap-1.5" aria-expanded={open}>
+            <Button
+                variant={open ? 'secondary' : 'outline'}
+                size="sm"
+                onClick={() => change(!open)}
+                className="gap-1.5"
+                aria-expanded={open}
+                data-test="guide-toggle"
+            >
                 <BookOpen className="size-4" /> Guide
             </Button>
             <aside
                 aria-label="Guide"
+                data-test="guide-panel"
                 className={cn(
                     'bg-background fixed inset-y-0 right-0 z-40 flex w-full flex-col overflow-y-auto border-l shadow-xl transition-transform duration-300 sm:w-[26rem]',
                     open ? 'translate-x-0' : 'pointer-events-none translate-x-full',
@@ -144,7 +152,7 @@ function StepLink({
 
     return href ? (
         <Button variant="outline" size="sm" asChild className="max-w-[48%]">
-            <Link href={href} prefetch>
+            <Link href={href} prefetch data-test={`guide-${direction}`}>
                 {label}
             </Link>
         </Button>
@@ -208,7 +216,12 @@ function GuideEditor({ guide, onDone }: { guide: GuidePayload; onDone: () => voi
     return (
         <form onSubmit={submit} className="space-y-2">
             <p className="text-muted-foreground text-xs">Markdown. Changes apply to every initiative.</p>
-            <Textarea value={data.body} onChange={(e) => setData('body', e.target.value)} className="min-h-72 font-mono text-xs" />
+            <Textarea
+                value={data.body}
+                onChange={(e) => setData('body', e.target.value)}
+                className="min-h-72 font-mono text-xs"
+                data-test="guide-editor"
+            />
             <InputError message={errors.body} />
             <div className="flex items-center justify-end gap-2">
                 {guide.customized && (
@@ -244,6 +257,7 @@ function ActivityNotes({ guide }: { guide: GuidePayload }) {
                         value={data.body}
                         onChange={(e) => setData('body', e.target.value)}
                         placeholder="Decisions, open questions, reflections…"
+                        data-test="guide-notes"
                         className="min-h-28"
                     />
                     <div className="flex items-center justify-end gap-2">

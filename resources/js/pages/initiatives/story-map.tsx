@@ -66,6 +66,7 @@ export default function StoryMap({
                         type="button"
                         onClick={() => toggle(kind.value)}
                         aria-pressed={layers.includes(kind.value)}
+                        data-test={`layer-${kind.value}`}
                         className={cn(
                             'flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-opacity',
                             !layers.includes(kind.value) && 'opacity-40',
@@ -92,6 +93,7 @@ export default function StoryMap({
                 ))}
                 {canManage && (
                     <AddItem
+                        testId="story-new-activity"
                         initiativeId={initiative.id}
                         parentId={null}
                         placeholder="New activity"
@@ -209,22 +211,40 @@ function ActivityColumn({
                                     )}
                                 </div>
                             ))}
-                        {canManage && <AddItem initiativeId={initiativeId} parentId={task.id} placeholder="Add card" kinds={kinds} />}
+                        {canManage && (
+                            <AddItem
+                                testId={`story-new-card-${task.id}`}
+                                initiativeId={initiativeId}
+                                parentId={task.id}
+                                placeholder="Add card"
+                                kinds={kinds}
+                            />
+                        )}
                     </div>
                 ))}
-                {canManage && <AddItem initiativeId={initiativeId} parentId={activity.id} placeholder="Add task" className="w-40" />}
+                {canManage && (
+                    <AddItem
+                        testId={`story-new-task-${activity.id}`}
+                        initiativeId={initiativeId}
+                        parentId={activity.id}
+                        placeholder="Add task"
+                        className="w-40"
+                    />
+                )}
             </div>
         </div>
     );
 }
 
 function AddItem({
+    testId,
     initiativeId,
     parentId,
     placeholder,
     kinds,
     className,
 }: {
+    testId: string;
     initiativeId: number;
     parentId: number | null;
     placeholder: string;
@@ -241,7 +261,13 @@ function AddItem({
     return (
         <form onSubmit={submit} className={cn('space-y-1.5', className)}>
             <div className="flex gap-1">
-                <Input value={data.title} onChange={(e) => setData('title', e.target.value)} placeholder={placeholder} className="h-8 text-sm" />
+                <Input
+                    value={data.title}
+                    onChange={(e) => setData('title', e.target.value)}
+                    placeholder={placeholder}
+                    className="h-8 text-sm"
+                    data-test={testId}
+                />
                 <Button
                     type="submit"
                     size="icon"
@@ -254,7 +280,13 @@ function AddItem({
                 </Button>
             </div>
             {kinds && (
-                <NativeSelect value={data.kind} onChange={(e) => setData('kind', e.target.value)} className="h-8 text-xs" aria-label="Card layer">
+                <NativeSelect
+                    value={data.kind}
+                    onChange={(e) => setData('kind', e.target.value)}
+                    className="h-8 text-xs"
+                    aria-label="Card layer"
+                    data-test={`${testId}-kind`}
+                >
                     {kinds.map((kind) => (
                         <option key={kind.value} value={kind.value}>
                             {kind.label}

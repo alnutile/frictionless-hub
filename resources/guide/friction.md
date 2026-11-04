@@ -10,4 +10,4 @@
 
 **Reading the heatmap**
 
-Darker cells show more friction for that stage and dimension. Look for stages that are dark across *several* dimensions. Those usually point to deeper, structural problems rather than quick fixes.
+Darker cells show more friction for that stage and dimension. Look for stages that are dark across _several_ dimensions. Those usually point to deeper, structural problems rather than quick fixes.

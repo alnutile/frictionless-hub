@@ -17,6 +17,20 @@ The seeded logins (password `password`) are `admin@example.com`, `facilitator@ex
 
 ## Tests
 
+There are three layers, and CI runs all of them on every push (see `.github/workflows/ci.yml`):
+
+| Layer | Where | What it covers |
+|---|---|---|
+| Unit + architecture | `tests/Unit` | Pure logic (heatmap, rating summary, reorder) and architecture rules (naming, no debug calls, no `env()` in app code) |
+| Feature | `tests/Feature` | Every HTTP endpoint: authentication, role permissions, isolation between initiatives (another initiative's records return 404), validation messages, and saved data |
+| Browser | `tests/Browser` | Pest browser tests on Playwright: click-through journeys in workbook order, the guide panel, a phone-sized viewport, and a check that every page loads without JavaScript errors |
+
+The `BenchmarkScenarioTest` and the browser smoke tests read the walkthrough registry, so each new activity is tested as soon as it's registered.
+
 ```bash
-php artisan test
+composer test           # unit + feature, in parallel
+composer test:browser   # browser tests (one-time setup: npx playwright install chromium)
+composer lint           # pint, prettier, eslint, tsc
 ```
+
+Browser tests need built assets (`npm run build`). When one fails, a screenshot is saved to `tests/Browser/Screenshots`, and CI uploads it as an artifact.

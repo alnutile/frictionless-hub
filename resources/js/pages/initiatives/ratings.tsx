@@ -113,6 +113,7 @@ function GroupCard({ initiativeId, group, canManage }: { initiativeId: number; g
                                                 className="size-7"
                                                 aria-label={`Rate ${n}`}
                                                 aria-pressed={item.mine === n}
+                                                data-test={`rate-${item.id}-${n}`}
                                                 onClick={() =>
                                                     router.put(
                                                         route('initiatives.rating-items.rate', { initiative: initiativeId, ratingItem: item.id }),
@@ -127,7 +128,10 @@ function GroupCard({ initiativeId, group, canManage }: { initiativeId: number; g
                                     </div>
                                 </td>
                                 <td className="px-3 py-2 text-center">
-                                    <span className={cn('inline-block min-w-10 rounded-md px-2 py-1 font-semibold tabular-nums', heat(item.average))}>
+                                    <span
+                                        className={cn('inline-block min-w-10 rounded-md px-2 py-1 font-semibold tabular-nums', heat(item.average))}
+                                        data-test={`average-${item.id}`}
+                                    >
                                         {item.average ?? '—'}
                                     </span>
                                 </td>
@@ -195,7 +199,13 @@ function AddItem({ initiativeId, groupId }: { initiativeId: number; groupId: num
 
     return (
         <form onSubmit={submit} className="mt-3 flex max-w-md gap-1.5">
-            <Input value={data.label} onChange={(e) => setData('label', e.target.value)} placeholder="Add a component to rate" className="h-8" />
+            <Input
+                value={data.label}
+                onChange={(e) => setData('label', e.target.value)}
+                placeholder="Add a component to rate"
+                className="h-8"
+                data-test={`rating-new-item-${groupId}`}
+            />
             <Button
                 type="submit"
                 size="icon"
@@ -220,7 +230,12 @@ function AddGroup({ initiativeId }: { initiativeId: number }) {
 
     return (
         <form onSubmit={submit} className="flex max-w-md gap-1.5">
-            <Input value={data.name} onChange={(e) => setData('name', e.target.value)} placeholder="New group, e.g. Local development" />
+            <Input
+                value={data.name}
+                onChange={(e) => setData('name', e.target.value)}
+                placeholder="New group, e.g. Local development"
+                data-test="rating-new-group"
+            />
             <Button type="submit" variant="outline" disabled={processing || !data.name}>
                 <Plus /> Add group
             </Button>

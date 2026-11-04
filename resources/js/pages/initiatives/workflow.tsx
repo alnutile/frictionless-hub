@@ -184,7 +184,13 @@ function AddTool({ initiativeId, stageId }: { initiativeId: number; stageId: num
     return (
         <form onSubmit={submit} className="space-y-1.5">
             <div className="flex gap-1.5">
-                <Input value={data.name} onChange={(e) => setData('name', e.target.value)} placeholder="Add a tool" className="h-8" />
+                <Input
+                    value={data.name}
+                    onChange={(e) => setData('name', e.target.value)}
+                    placeholder="Add a tool"
+                    className="h-8"
+                    data-test={`tool-input-${stageId}`}
+                />
                 <Button
                     type="submit"
                     size="icon"
