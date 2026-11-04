@@ -5,27 +5,17 @@ import { type InitiativeSummary, type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { type ReactNode, useEffect, useState } from 'react';
 
-interface Tab {
-    title: string;
-    href: string | null;
-    step: string;
-}
-
-function tabs(id: number): Tab[] {
-    return [
-        { title: 'Overview', href: `/initiatives/${id}`, step: '' },
-        { title: 'Workflow map', href: `/initiatives/${id}/workflow`, step: 'Discover' },
-        { title: 'Friction log', href: `/initiatives/${id}/friction`, step: 'Discover' },
-        { title: 'Listening tour', href: null, step: 'Discover' },
-        { title: 'Stakeholders', href: null, step: 'Discover' },
-        { title: 'Quick wins', href: null, step: 'Quick wins' },
-        { title: 'Surveys & data', href: null, step: 'Data' },
-        { title: 'Prioritize', href: null, step: 'Prioritize' },
-    ];
-}
-
 export default function InitiativeLayout({ initiative, title, children }: { initiative: InitiativeSummary; title: string; children: ReactNode }) {
     const { url, props } = usePage<SharedData>();
+    const activities = props.guide?.activities ?? [];
+    const current = activities.find((a) => a.key === props.guide?.key);
+    const phase = current?.phase ?? initiative.phase;
+    const tabs = [
+        { key: 'overview', title: 'Overview', href: route('initiatives.show', initiative.id) as string | null },
+        ...activities
+            .filter((a) => a.phase === phase)
+            .map((a) => ({ key: a.key, title: `${a.step}. ${a.title}`, href: a.route ? (route(a.route, initiative.id) as string) : null })),
+    ];
     const [flash, setFlash] = useState<string | null>(null);
 
     useEffect(() => {
@@ -57,7 +47,7 @@ export default function InitiativeLayout({ initiative, title, children }: { init
                 </div>
 
                 <nav className="flex gap-1 overflow-x-auto border-b">
-                    {tabs(initiative.id).map((tab) =>
+                    {tabs.map((tab) =>
                         tab.href ? (
                             <Link
                                 key={tab.title}
@@ -65,7 +55,7 @@ export default function InitiativeLayout({ initiative, title, children }: { init
                                 prefetch
                                 className={cn(
                                     '-mb-px border-b-2 px-3 py-2 text-sm whitespace-nowrap transition-colors',
-                                    url.split('?')[0] === tab.href
+                                    (props.guide?.key ?? 'overview') === tab.key
                                         ? 'border-primary text-foreground font-medium'
                                         : 'text-muted-foreground hover:text-foreground border-transparent',
                                 )}
@@ -75,7 +65,7 @@ export default function InitiativeLayout({ initiative, title, children }: { init
                         ) : (
                             <span
                                 key={tab.title}
-                                title="Coming in a later step"
+                                title="Not built yet"
                                 className="text-muted-foreground/50 -mb-px cursor-not-allowed border-b-2 border-transparent px-3 py-2 text-sm whitespace-nowrap"
                             >
                                 {tab.title}

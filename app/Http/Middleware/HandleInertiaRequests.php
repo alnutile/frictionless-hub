@@ -2,6 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Initiative;
+use App\Services\Guide;
+use App\Support\Walkthrough;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -49,9 +52,44 @@ class HandleInertiaRequests extends Middleware
                     'facilitate' => (bool) $request->user()?->canFacilitate(),
                 ],
             ],
+            'guide' => fn () => $this->guide($request),
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
             ],
         ]);
+    }
+
+    /**
+     * Guide panel payload for the current route, or null if the route has no guide.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function guide(Request $request): ?array
+    {
+        $key = Walkthrough::keyForRoute($request->route()?->getName());
+
+        if ($key === null || $request->user() === null) {
+            return null;
+        }
+
+        $initiative = $request->route('initiative');
+        $initiative = $initiative instanceof Initiative ? $initiative : null;
+        $body = Guide::body($key);
+        $isAdmin = $request->user()->isAdmin();
+
+        return [
+            'key' => $key,
+            'title' => Walkthrough::titleFor($key),
+            'html' => Guide::render($body),
+            'markdown' => $isAdmin ? $body : null,
+            'customized' => $isAdmin && Guide::isCustomized($key),
+            'canEdit' => $isAdmin,
+            'activities' => Walkthrough::forFrontend(),
+            'initiativeId' => $initiative?->id,
+            'note' => $initiative
+                ? $initiative->activityNotes()->where('activity_key', $key)->value('body')
+                : null,
+            'canEditNote' => $initiative !== null && $request->user()->can('update', $initiative),
+        ];
     }
 }

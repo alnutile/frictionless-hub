@@ -27,6 +27,7 @@ export interface SharedData {
     quote: { message: string; author: string };
     auth: Auth;
     flash: { success: string | null };
+    guide: GuidePayload | null;
     [key: string]: unknown;
 }
 
@@ -54,4 +55,26 @@ export interface InitiativeSummary {
     phase: string;
     phase_label: string;
     owner: string;
+}
+
+export interface WalkthroughActivity {
+    key: string;
+    step: number;
+    phase: string;
+    phase_label: string;
+    title: string;
+    route: string | null;
+}
+
+export interface GuidePayload {
+    key: string;
+    title: string;
+    html: string;
+    markdown: string | null;
+    customized: boolean;
+    canEdit: boolean;
+    activities: WalkthroughActivity[];
+    initiativeId: number | null;
+    note: string | null;
+    canEditNote: boolean;
 }

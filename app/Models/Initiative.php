@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Initiative extends Model
 {
@@ -64,6 +65,38 @@ class Initiative extends Model
     public function frictionPoints(): HasMany
     {
         return $this->hasMany(FrictionPoint::class);
+    }
+
+    /**
+     * @return HasMany<StoryMapItem, $this>
+     */
+    public function storyMapItems(): HasMany
+    {
+        return $this->hasMany(StoryMapItem::class);
+    }
+
+    /**
+     * @return HasMany<RatingGroup, $this>
+     */
+    public function ratingGroups(): HasMany
+    {
+        return $this->hasMany(RatingGroup::class)->orderBy('position');
+    }
+
+    /**
+     * @return HasManyThrough<RatingItem, RatingGroup, $this>
+     */
+    public function ratingItems(): HasManyThrough
+    {
+        return $this->hasManyThrough(RatingItem::class, RatingGroup::class);
+    }
+
+    /**
+     * @return HasMany<ActivityNote, $this>
+     */
+    public function activityNotes(): HasMany
+    {
+        return $this->hasMany(ActivityNote::class);
     }
 
     /**

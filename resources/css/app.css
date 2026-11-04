@@ -156,3 +156,45 @@
         @apply bg-background text-foreground;
     }
 }
+
+@layer components {
+    .guide-prose {
+        @apply text-sm leading-relaxed;
+    }
+    .guide-prose p,
+    .guide-prose ul,
+    .guide-prose ol {
+        @apply mb-3;
+    }
+    .guide-prose ul {
+        @apply list-disc pl-5;
+    }
+    .guide-prose ol {
+        @apply list-decimal pl-5;
+    }
+    .guide-prose li {
+        @apply mb-1;
+    }
+    .guide-prose strong {
+        @apply text-foreground font-semibold;
+    }
+    .guide-prose h1,
+    .guide-prose h2,
+    .guide-prose h3 {
+        @apply text-foreground mt-4 mb-2 font-semibold;
+    }
+    .guide-prose a {
+        @apply text-teal-600 underline dark:text-teal-400;
+    }
+    .guide-prose code {
+        @apply bg-muted rounded px-1 py-0.5 text-xs;
+    }
+}
+
+/* Make room for the docked guide panel on wide screens instead of covering the page. */
+@media (min-width: 1280px) {
+    body.guide-open main {
+        padding-right: 26rem;
+        transition: padding-right 300ms;
+    }
+}

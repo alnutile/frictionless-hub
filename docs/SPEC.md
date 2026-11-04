@@ -15,9 +15,26 @@ example tables, survey questions, rubric criteria, or email copy.
 - Everything a reader would recognize from the book (question wording, criteria lists, the
   examples) is **data an admin enters** into their own workspace. It never goes into a
   migration, a seed file, or a fixture.
-- Seeds and test fixtures use neutral placeholder content ("Criterion A", "Sample question 1").
+- Seed and fixture content is **original**: either neutral placeholders or the fictional benchmark scenario below.
 - Publicly published frameworks can be named and modeled: RICE, SPACE, DORA metrics, Likert
   scales, and story mapping.
+
+## Guide
+
+A docked right-side panel available on every walkthrough screen.
+
+- It shows what the activity is for, how to use it, and tips, as step *n* of *N*, with previous/next links and the full list of steps.
+- The default text lives in `resources/guide/*.md` and is written in our own words. An admin can edit any entry in the app (stored in `guide_entries`), and can reset it to the default.
+- **Notes for this initiative** sit at the bottom of the panel, stored per initiative and activity in `activity_notes`. Use them for decisions and reflections.
+- The activity order comes from `App\Support\Walkthrough`, which follows the workbook's step order.
+
+## Benchmark scenario: Larkspur Labs
+
+`LarkspurScenarioSeeder` is an ongoing seed and the shared benchmark. It describes a fictional ~140-developer SaaS company (field-service scheduling) with web, mobile, platform, payments and legacy-monolith ("Hedgehog") teams. Everything in it is invented.
+
+- Each time a walkthrough activity ships, a matching section is added to the seeder.
+- `BenchmarkScenarioTest` seeds it and opens every built activity as the owner and as a viewer.
+- **Planned (Data phase):** a GitHub connector that pulls real pull-request, review and CI timing from configured repositories (for example `alnutile/*`) and maps them onto the scenario's teams. This shows the system working on live data while the people and teams stay fictional.
 
 ## Roles
 

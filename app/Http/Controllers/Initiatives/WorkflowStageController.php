@@ -8,9 +8,9 @@ use App\Http\Requests\Initiatives\WorkflowStageRequest;
 use App\Models\Initiative;
 use App\Models\StageTool;
 use App\Models\WorkflowStage;
+use App\Support\Reorder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -81,7 +81,7 @@ class WorkflowStageController extends Controller
     }
 
     /**
-     * Swap a stage with its neighbour, then renumber positions 0..n.
+     * Swap a stage with its neighbour.
      */
     public function move(Request $request, Initiative $initiative, WorkflowStage $stage): RedirectResponse
     {
@@ -90,18 +90,7 @@ class WorkflowStageController extends Controller
         $direction = $request->validate(['direction' => ['required', Rule::in(['up', 'down'])]])['direction'];
 
         $ids = $initiative->stages()->pluck('id')->all();
-        $index = array_search($stage->id, $ids, true);
-        $target = $direction === 'up' ? $index - 1 : $index + 1;
-
-        if ($target >= 0 && $target < count($ids)) {
-            [$ids[$index], $ids[$target]] = [$ids[$target], $ids[$index]];
-
-            DB::transaction(function () use ($ids) {
-                foreach ($ids as $position => $id) {
-                    WorkflowStage::whereKey($id)->update(['position' => $position]);
-                }
-            });
-        }
+        Reorder::persist(WorkflowStage::class, Reorder::swap($ids, $stage->id, $direction));
 
         return back();
     }
