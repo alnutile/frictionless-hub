@@ -81,7 +81,7 @@ jobs:
           php artisan key:generate
 
       - name: Run tests with coverage
-        run: vendor/bin/pest --testsuite=Unit,Feature --parallel --coverage --coverage-clover=coverage.xml
+        run: vendor/bin/pest --testsuite=Unit,Feature --parallel --coverage --min=85 --coverage-clover=coverage.xml
 
       - name: Upload coverage report
         if: always()
