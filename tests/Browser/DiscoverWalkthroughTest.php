@@ -121,3 +121,32 @@ it('sets up a rating grid and rates an item', function () {
 
     expect($item->ratings()->pluck('score')->all())->toBe([4]);
 });
+
+it('keeps friction without a stage visible and lets you assign one later', function () {
+    $initiative = Initiative::factory()->for($this->facilitator, 'owner')->create();
+    $initiative->seedDefaults();
+    $testing = $initiative->stages()->firstWhere('name', 'Testing');
+
+    $page = visit(route('initiatives.friction', $initiative))
+        ->click('@friction-open')
+        ->fill('title', 'Not sure where this belongs')
+        ->click('@pain-3')
+        ->click('@friction-submit')
+        ->assertSee('Friction point logged.')
+        ->assertSeeIn('@heatmap-row-none', 'No stage')
+        ->assertSeeIn('@heatmap-total', '1')
+        ->assertSeeIn('@unassigned-banner', '1 friction point has no stage yet.');
+
+    $point = $initiative->frictionPoints()->first();
+
+    $page->click("@assign-stage-{$point->id}")
+        ->select('stage', (string) $testing->id)
+        ->click('@friction-submit')
+        ->assertSee('Friction point updated.')
+        ->assertNotPresent('@heatmap-row-none')
+        ->assertNotPresent('@unassigned-banner')
+        ->assertSeeIn('@heatmap-total', '1')
+        ->assertNoJavaScriptErrors();
+
+    expect($point->fresh()->workflow_stage_id)->toBe($testing->id);
+});

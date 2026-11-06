@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 import { type InitiativeSummary, type Option } from '@/types';
 import { router, useForm } from '@inertiajs/react';
 import { Pencil, Plus, Trash2, X } from 'lucide-react';
-import { FormEventHandler, useMemo, useState } from 'react';
+import { FormEventHandler, useMemo, useRef, useState } from 'react';
 
 interface StageRef {
     id: number;
@@ -40,8 +40,9 @@ interface FrictionPoint {
 }
 
 interface Heatmap {
-    rows: { stage_id: number; stage: string; total: number; cells: { dimension_id: number; count: number; avg_pain: number | null }[] }[];
+    rows: { stage_id: number | null; stage: string; total: number; cells: { dimension_id: number; count: number; avg_pain: number | null }[] }[];
     max_count: number;
+    total: number;
     unassigned: number;
 }
 
@@ -68,16 +69,42 @@ export default function Friction(props: Props) {
         [frictionPoints, stageFilter],
     );
 
+    const listRef = useRef<HTMLDivElement>(null);
+    const showUnassigned = () => {
+        setStageFilter('none');
+        listRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
     const dimensionName = (id: number) => dimensions.find((d) => d.id === id)?.name ?? '?';
 
     return (
         <InitiativeLayout initiative={initiative} title="Friction log">
-            <HeatmapCard heatmap={props.heatmap} dimensions={dimensions} />
+            <HeatmapCard heatmap={props.heatmap} dimensions={dimensions} onShowUnassigned={showUnassigned} />
+
+            {props.heatmap.unassigned > 0 && (
+                <div
+                    className="flex flex-wrap items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100"
+                    data-test="unassigned-banner"
+                >
+                    <span>
+                        {props.heatmap.unassigned} friction point{props.heatmap.unassigned === 1 ? ' has' : 's have'} no stage yet. They're counted,
+                        but assigning a stage shows where the friction happens.
+                    </span>
+                    <Button size="sm" variant="outline" className="ml-auto" onClick={showUnassigned}>
+                        Show them
+                    </Button>
+                </div>
+            )}
 
             <DimensionsCard initiativeId={initiative.id} dimensions={dimensions} canManage={canManage} />
 
-            <div className="flex flex-wrap items-center gap-3">
-                <h2 className="text-lg font-semibold">Friction points</h2>
+            <div ref={listRef} className="flex scroll-mt-4 flex-wrap items-center gap-3">
+                <h2 className="text-lg font-semibold">
+                    Friction points{' '}
+                    <span className="text-muted-foreground text-sm font-normal" data-test="friction-count">
+                        ({visible.length === frictionPoints.length ? frictionPoints.length : `${visible.length} of ${frictionPoints.length}`})
+                    </span>
+                </h2>
                 <NativeSelect
                     className="ml-auto w-48"
                     value={stageFilter}
@@ -124,7 +151,25 @@ export default function Friction(props: Props) {
                                             <div className="text-muted-foreground mt-0.5 whitespace-pre-line">{point.description}</div>
                                         )}
                                     </td>
-                                    <td className="px-3 py-2">{point.stage ?? '—'}</td>
+                                    <td className="px-3 py-2">
+                                        {point.stage ?? (
+                                            <span className="inline-flex flex-wrap items-center gap-1.5">
+                                                <Badge variant="outline" className="border-amber-400 text-amber-700 dark:text-amber-300">
+                                                    No stage
+                                                </Badge>
+                                                {canManage && (
+                                                    <button
+                                                        type="button"
+                                                        className="text-xs text-teal-600 underline dark:text-teal-400"
+                                                        onClick={() => setEditing(point)}
+                                                        data-test={`assign-stage-${point.id}`}
+                                                    >
+                                                        Assign
+                                                    </button>
+                                                )}
+                                            </span>
+                                        )}
+                                    </td>
                                     <td className="px-3 py-2">{point.frequency_label ?? '—'}</td>
                                     <td className="px-3 py-2">
                                         <PainBadge pain={point.pain} />
@@ -194,7 +239,7 @@ function PainBadge({ pain }: { pain: number | null }) {
     return <span className={cn('inline-flex size-7 items-center justify-center rounded-md font-semibold tabular-nums', tone)}>{pain}</span>;
 }
 
-function HeatmapCard({ heatmap, dimensions }: { heatmap: Heatmap; dimensions: Dimension[] }) {
+function HeatmapCard({ heatmap, dimensions, onShowUnassigned }: { heatmap: Heatmap; dimensions: Dimension[]; onShowUnassigned: () => void }) {
     const intensity = (count: number) => (heatmap.max_count === 0 ? 0 : count / heatmap.max_count);
 
     return (
@@ -202,8 +247,8 @@ function HeatmapCard({ heatmap, dimensions }: { heatmap: Heatmap; dimensions: Di
             <CardHeader>
                 <CardTitle>Where friction concentrates</CardTitle>
                 <CardDescription>
-                    Each cell shows how many friction points a stage has for that dimension, and their average pain. Darker cells have more.
-                    {heatmap.unassigned > 0 && ` ${heatmap.unassigned} point(s) have no stage and are not shown.`}
+                    Each cell shows how many friction points a stage has for that dimension, and their average pain. Darker cells have more. The Total
+                    column counts every point once, including points without a dimension.
                 </CardDescription>
             </CardHeader>
             <CardContent className="overflow-x-auto">
@@ -224,8 +269,19 @@ function HeatmapCard({ heatmap, dimensions }: { heatmap: Heatmap; dimensions: Di
                         </thead>
                         <tbody>
                             {heatmap.rows.map((row) => (
-                                <tr key={row.stage_id}>
-                                    <td className="px-2 py-1 font-medium whitespace-nowrap">{row.stage}</td>
+                                <tr key={row.stage_id ?? 'none'} data-test={row.stage_id === null ? 'heatmap-row-none' : undefined}>
+                                    <td className="px-2 py-1 font-medium whitespace-nowrap">
+                                        {row.stage_id === null ? (
+                                            <span className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+                                                {row.stage}
+                                                <button type="button" className="text-xs font-normal underline" onClick={onShowUnassigned}>
+                                                    Assign
+                                                </button>
+                                            </span>
+                                        ) : (
+                                            row.stage
+                                        )}
+                                    </td>
                                     {row.cells.map((cell) => (
                                         <td
                                             key={cell.dimension_id}
@@ -251,6 +307,15 @@ function HeatmapCard({ heatmap, dimensions }: { heatmap: Heatmap; dimensions: Di
                                 </tr>
                             ))}
                         </tbody>
+                        <tfoot>
+                            <tr>
+                                <td className="text-muted-foreground px-2 pt-2 text-left font-medium">Total</td>
+                                <td colSpan={dimensions.length} />
+                                <td className="pt-2 text-center font-semibold tabular-nums" data-test="heatmap-total">
+                                    {heatmap.total}
+                                </td>
+                            </tr>
+                        </tfoot>
                     </table>
                 )}
             </CardContent>

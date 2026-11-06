@@ -139,4 +139,27 @@ class FrictionPointTest extends TestCase
             ->post(route('initiatives.dimensions.store', $other), ['name' => $existing->name])
             ->assertSessionHasNoErrors();
     }
+
+    public function test_overview_list_and_heatmap_counts_agree_when_some_points_have_no_stage(): void
+    {
+        $stage = $this->initiative->stages()->first();
+        FrictionPoint::factory()->for($this->initiative)->count(2)->create(['workflow_stage_id' => $stage->id]);
+        FrictionPoint::factory()->for($this->initiative)->count(3)->create(['workflow_stage_id' => null]);
+
+        $viewer = User::factory()->create();
+
+        $this->actingAs($viewer)
+            ->get(route('initiatives.friction', $this->initiative))
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('frictionPoints', 5)
+                ->where('heatmap.total', 5)
+                ->where('heatmap.unassigned', 3)
+                ->where('heatmap.rows', fn ($rows) => collect($rows)->sum('total') === 5
+                    && collect($rows)->last()['stage'] === 'No stage'
+                    && collect($rows)->last()['total'] === 3));
+
+        $this->actingAs($viewer)
+            ->get(route('initiatives.show', $this->initiative))
+            ->assertInertia(fn (Assert $page) => $page->where('progress.friction.count', 5));
+    }
 }
