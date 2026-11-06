@@ -1,1 +1,7 @@
-_This activity is planned and not built yet._ The guide for it will be added when the screen ships.
+**Planned.** This step isn't built yet.
+
+**What it's for:** deciding how DevEx work should be staffed and owned over the long term.
+
+**What it will do**
+
+- Compare candidate structures (a central team, embedded champions, a platform team or a mix) against considerations you choose.

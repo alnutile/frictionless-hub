@@ -7,6 +7,7 @@ import { NativeSelect } from '@/components/ui/native-select';
 import { Textarea } from '@/components/ui/textarea';
 import InitiativeLayout from '@/layouts/initiative-layout';
 import { cn } from '@/lib/utils';
+import { activityHref } from '@/lib/walkthrough';
 import { type InitiativeSummary, type Option, type SharedData, type WalkthroughActivity } from '@/types';
 import { Link, router, useForm, usePage } from '@inertiajs/react';
 import { FormEventHandler } from 'react';
@@ -27,6 +28,7 @@ export default function InitiativeShow({
     const { guide } = usePage<SharedData>().props;
     const activities = guide?.activities ?? [];
     const phaseOrder = phases.filter((p) => activities.some((a) => a.phase === p.value));
+    const phaseIsBuilt = (phase: string) => activities.some((a) => a.phase === phase && a.route !== null);
 
     return (
         <InitiativeLayout initiative={initiative} title="Overview">
@@ -38,11 +40,17 @@ export default function InitiativeShow({
                         <h2
                             className={cn(
                                 'mb-2 text-sm font-semibold tracking-wide uppercase',
-                                phase.value === initiative.phase ? 'text-teal-600 dark:text-teal-400' : 'text-muted-foreground',
+                                !phaseIsBuilt(phase.value)
+                                    ? 'text-muted-foreground/50'
+                                    : phase.value === initiative.phase
+                                      ? 'text-teal-600 dark:text-teal-400'
+                                      : 'text-muted-foreground',
                             )}
+                            data-test={`phase-${phase.value}`}
                         >
                             {phase.label}
                             {phase.value === initiative.phase && ' · current phase'}
+                            {!phaseIsBuilt(phase.value) && ' · planned'}
                         </h2>
                         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                             {activities
@@ -74,34 +82,35 @@ function LadderCard({
     initiativeId: number;
     progress?: { count: number; label: string };
 }) {
-    const body = (
-        <Card className={cn('h-full gap-2 py-4 transition-colors', activity.route ? 'hover:border-primary/50' : 'opacity-50')}>
-            <CardHeader className="px-4">
-                <CardDescription>Step {activity.step}</CardDescription>
-                <CardTitle className="text-base">{activity.title}</CardTitle>
-            </CardHeader>
-            <CardContent className="text-muted-foreground px-4 text-sm">
-                {activity.route ? (
-                    progress ? (
-                        <span>
-                            <span className="text-foreground font-semibold tabular-nums">{progress.count}</span> {progress.label}
-                        </span>
-                    ) : (
-                        'Open'
-                    )
-                ) : (
-                    'Not built yet'
-                )}
-            </CardContent>
-        </Card>
-    );
+    const built = activity.route !== null;
 
-    return activity.route ? (
-        <Link href={route(activity.route, initiativeId)} prefetch>
-            {body}
+    return (
+        <Link href={activityHref(activity, initiativeId)} prefetch data-test={`ladder-${activity.key}`}>
+            <Card
+                className={cn(
+                    'h-full gap-2 py-4 transition-colors',
+                    built ? 'hover:border-primary/50' : 'border-dashed opacity-60 hover:border-solid hover:opacity-90',
+                )}
+            >
+                <CardHeader className="px-4">
+                    <CardDescription>Step {activity.step}</CardDescription>
+                    <CardTitle className="text-base">{activity.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="text-muted-foreground px-4 text-sm">
+                    {built ? (
+                        progress ? (
+                            <span>
+                                <span className="text-foreground font-semibold tabular-nums">{progress.count}</span> {progress.label}
+                            </span>
+                        ) : (
+                            'Open'
+                        )
+                    ) : (
+                        'Planned · see what it will do'
+                    )}
+                </CardContent>
+            </Card>
         </Link>
-    ) : (
-        body
     );
 }
 

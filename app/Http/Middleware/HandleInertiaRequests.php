@@ -68,7 +68,8 @@ class HandleInertiaRequests extends Middleware
      */
     private function guide(Request $request): ?array
     {
-        $key = Walkthrough::keyForRoute($request->route()?->getName());
+        $plannedKey = $request->route('key');
+        $key = Walkthrough::keyForRoute($request->route()?->getName(), is_string($plannedKey) ? $plannedKey : null);
 
         if ($key === null || $request->user() === null) {
             return null;

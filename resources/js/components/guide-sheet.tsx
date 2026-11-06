@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { activityHref } from '@/lib/walkthrough';
 import { type GuidePayload, type SharedData, type WalkthroughActivity } from '@/types';
 import { Link, router, useForm, usePage } from '@inertiajs/react';
 import { BookOpen, ChevronLeft, ChevronRight, Pencil, X } from 'lucide-react';
@@ -27,9 +28,8 @@ function writeOpen(open: boolean) {
     }
 }
 
-function activityHref(activity: WalkthroughActivity, initiativeId: number | null): string | null {
-    if (!activity.route || initiativeId === null) return null;
-    return route(activity.route, initiativeId);
+function stepHref(activity: WalkthroughActivity, initiativeId: number | null): string | null {
+    return initiativeId === null ? null : activityHref(activity, initiativeId);
 }
 
 /**
@@ -144,7 +144,7 @@ function StepLink({
     direction: 'prev' | 'next';
 }) {
     if (!activity) return <span />;
-    const href = activityHref(activity, initiativeId);
+    const href = stepHref(activity, initiativeId);
     const label = (
         <>
             {direction === 'prev' && <ChevronLeft className="size-4" />}
@@ -180,13 +180,14 @@ function AllSteps({ guide }: { guide: GuidePayload }) {
                             {guide.activities
                                 .filter((a) => a.phase_label === phase)
                                 .map((a) => {
-                                    const href = activityHref(a, guide.initiativeId);
+                                    const href = stepHref(a, guide.initiativeId);
                                     const text = `${a.step}. ${a.title}`;
                                     return (
                                         <li key={a.key} className={cn('text-sm', a.key === guide.key && 'font-semibold')}>
                                             {href ? (
-                                                <Link href={href} className="hover:underline">
+                                                <Link href={href} className={cn('hover:underline', !a.route && 'text-muted-foreground/70')}>
                                                     {text}
+                                                    {!a.route && ' (planned)'}
                                                 </Link>
                                             ) : (
                                                 <span className="text-muted-foreground/60">{text}</span>

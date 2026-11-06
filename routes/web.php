@@ -7,6 +7,7 @@ use App\Http\Controllers\GuideController;
 use App\Http\Controllers\InitiativeController;
 use App\Http\Controllers\Initiatives\DimensionController;
 use App\Http\Controllers\Initiatives\FrictionPointController;
+use App\Http\Controllers\Initiatives\PlannedActivityController;
 use App\Http\Controllers\Initiatives\RatingController;
 use App\Http\Controllers\Initiatives\StageToolController;
 use App\Http\Controllers\Initiatives\StoryMapController;
@@ -24,6 +25,8 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('initiatives', InitiativeController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
 
     Route::prefix('initiatives/{initiative}')->name('initiatives.')->scopeBindings()->group(function () {
+        Route::get('planned/{key}', [PlannedActivityController::class, 'show'])->name('planned');
+
         Route::get('workflow', [WorkflowStageController::class, 'index'])->name('workflow');
         Route::post('stages', [WorkflowStageController::class, 'store'])->name('stages.store');
         Route::patch('stages/{stage}', [WorkflowStageController::class, 'update'])->name('stages.update');

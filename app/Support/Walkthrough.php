@@ -55,10 +55,14 @@ class Walkthrough
     /**
      * Resolve which guide key belongs to a route name.
      */
-    public static function keyForRoute(?string $routeName): ?string
+    public static function keyForRoute(?string $routeName, ?string $plannedKey = null): ?string
     {
         if ($routeName === null) {
             return null;
+        }
+
+        if ($routeName === 'initiatives.planned') {
+            return $plannedKey !== null && self::isKnownKey($plannedKey) ? $plannedKey : null;
         }
 
         foreach (self::activities() as $activity) {

@@ -4,4 +4,4 @@ The overview is the **ladder** for this initiative: every activity in order, gro
 - The counts show how much has been captured so far.
 - Set the **current phase** in Settings so everyone knows where the program stands.
 
-Greyed-out activities are planned but not built yet.
+Faded activities are planned. Click one to see what it will do and where it fits.

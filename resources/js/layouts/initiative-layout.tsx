@@ -1,6 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import AppLayout from '@/layouts/app-layout';
 import { cn } from '@/lib/utils';
+import { activityHref } from '@/lib/walkthrough';
 import { type InitiativeSummary, type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { type ReactNode, useEffect, useState } from 'react';
@@ -11,10 +12,10 @@ export default function InitiativeLayout({ initiative, title, children }: { init
     const current = activities.find((a) => a.key === props.guide?.key);
     const phase = current?.phase ?? initiative.phase;
     const tabs = [
-        { key: 'overview', title: 'Overview', href: route('initiatives.show', initiative.id) as string | null },
+        { key: 'overview', title: 'Overview', href: route('initiatives.show', initiative.id) as string, planned: false },
         ...activities
             .filter((a) => a.phase === phase)
-            .map((a) => ({ key: a.key, title: `${a.step}. ${a.title}`, href: a.route ? (route(a.route, initiative.id) as string) : null })),
+            .map((a) => ({ key: a.key, title: `${a.step}. ${a.title}`, href: activityHref(a, initiative.id), planned: a.route === null })),
     ];
     const [flash, setFlash] = useState<string | null>(null);
 
@@ -47,31 +48,24 @@ export default function InitiativeLayout({ initiative, title, children }: { init
                 </div>
 
                 <nav className="flex gap-1 overflow-x-auto border-b">
-                    {tabs.map((tab) =>
-                        tab.href ? (
-                            <Link
-                                key={tab.title}
-                                href={tab.href}
-                                prefetch
-                                className={cn(
-                                    '-mb-px border-b-2 px-3 py-2 text-sm whitespace-nowrap transition-colors',
-                                    (props.guide?.key ?? 'overview') === tab.key
-                                        ? 'border-primary text-foreground font-medium'
-                                        : 'text-muted-foreground hover:text-foreground border-transparent',
-                                )}
-                            >
-                                {tab.title}
-                            </Link>
-                        ) : (
-                            <span
-                                key={tab.title}
-                                title="Not built yet"
-                                className="text-muted-foreground/50 -mb-px cursor-not-allowed border-b-2 border-transparent px-3 py-2 text-sm whitespace-nowrap"
-                            >
-                                {tab.title}
-                            </span>
-                        ),
-                    )}
+                    {tabs.map((tab) => (
+                        <Link
+                            key={tab.key}
+                            href={tab.href}
+                            prefetch
+                            title={tab.planned ? 'Planned: see what this step will do' : undefined}
+                            className={cn(
+                                '-mb-px border-b-2 px-3 py-2 text-sm whitespace-nowrap transition-colors',
+                                (props.guide?.key ?? 'overview') === tab.key
+                                    ? 'border-primary text-foreground font-medium'
+                                    : tab.planned
+                                      ? 'text-muted-foreground/50 hover:text-muted-foreground border-transparent'
+                                      : 'text-muted-foreground hover:text-foreground border-transparent',
+                            )}
+                        >
+                            {tab.title}
+                        </Link>
+                    ))}
                 </nav>
 
                 {flash && (
