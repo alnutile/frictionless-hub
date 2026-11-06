@@ -2,11 +2,14 @@
 
 namespace App\Services;
 
+use App\Enums\ParticipantStatus;
 use App\Models\Dimension;
 use App\Models\FrictionPoint;
 use App\Models\Initiative;
+use App\Models\Participant;
 use App\Models\RatingGroup;
 use App\Models\RatingItem;
+use App\Models\SegmentValue;
 use App\Models\StageTool;
 use App\Models\StoryMapItem;
 use App\Models\User;
@@ -88,6 +91,7 @@ class AssistantContext
             self::friction($initiative),
             self::storyMap($initiative),
             self::ratings($initiative),
+            self::listeningTour($initiative),
         ];
 
         return implode("\n\n", array_filter($parts));
@@ -176,6 +180,35 @@ class AssistantContext
                     ? "  - {$item->label}: no ratings"
                     : "  - {$item->label}: average {$summary['average']} from {$summary['count']} people (spread {$summary['spread']})";
             }
+        }
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * Aggregates only: participant names and notes are never sent to the model.
+     */
+    private static function listeningTour(Initiative $initiative): string
+    {
+        $participants = $initiative->participants()->with('segmentValues')->get();
+        $areaCategory = $initiative->segmentCategories()->where('is_area', true)->with('values')->first();
+
+        if ($participants->isEmpty() && ($areaCategory?->values->isEmpty() ?? true)) {
+            return '';
+        }
+
+        $lines = ['### Listening tour (counts only; names are private)'];
+        $lines[] = '- Target: '.($initiative->interview_target ?? 'not set');
+        $lines[] = '- By status: '.collect(ParticipantStatus::cases())
+            ->map(fn (ParticipantStatus $s) => $s->label().' '.$participants->where('status', $s)->count())
+            ->implode(', ');
+
+        if ($areaCategory) {
+            $counted = $participants->filter(fn (Participant $p) => $p->status->countsTowardCoverage());
+            $perArea = $areaCategory->values->map(fn (SegmentValue $area) => $area->name.' '.$counted->filter(
+                fn (Participant $p) => $p->segmentValues->contains('id', $area->id),
+            )->count());
+            $lines[] = '- People planned per work area: '.$perArea->implode(', ');
         }
 
         return implode("\n", $lines);

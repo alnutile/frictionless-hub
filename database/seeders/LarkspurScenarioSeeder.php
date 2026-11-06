@@ -50,6 +50,7 @@ class LarkspurScenarioSeeder extends Seeder
             $this->seedFriction($initiative);
             $this->seedStoryMap($initiative);
             $this->seedRatings($initiative);
+            $this->seedListeningTour($initiative);
         });
     }
 
@@ -228,5 +229,94 @@ class LarkspurScenarioSeeder extends Seeder
                 }
             }
         }
+    }
+
+    private function seedListeningTour(Initiative $initiative): void
+    {
+        $initiative->update(['interview_target' => 14]);
+
+        $areas = [];
+        $areaCategory = $initiative->areaCategory();
+        foreach (['Web', 'Mobile', 'Platform', 'Payments', 'Hedgehog (legacy)'] as $position => $name) {
+            $areas[$name] = $areaCategory->values()->create(['name' => $name, 'position' => $position])->id;
+        }
+
+        $groups = [
+            'Experience' => ['Early career', 'Mid-level', 'Senior / staff'],
+            'Time at Larkspur' => ['Under 1 year', '1–3 years', 'Over 3 years'],
+            'AI tool use' => ['Rarely', 'Weekly', 'Daily'],
+        ];
+
+        $values = [];
+        foreach (array_keys($groups) as $position => $groupName) {
+            $category = $initiative->segmentCategories()->create(['name' => $groupName, 'position' => $position + 1]);
+            foreach ($groups[$groupName] as $valuePosition => $valueName) {
+                $values[$valueName] = $category->values()->create(['name' => $valueName, 'position' => $valuePosition])->id;
+            }
+        }
+
+        $checklist = [];
+        foreach ([
+            'Confirm the time and send the video link',
+            'Explain the purpose and how notes will be used',
+            'Review the friction logged for their area',
+            'Prepare two or three questions specific to their work',
+            'Ask whether recording is okay',
+            'Open the notes template',
+        ] as $position => $label) {
+            $checklist[] = $initiative->checklistItems()->create(['label' => $label, 'position' => $position])->id;
+        }
+
+        // [name, role, area, [experience, tenure, ai], status, reason, prep items done]
+        // Payments has a single person and nobody early-career is on Platform: deliberate gaps.
+        // Noor has no "Time at Larkspur" value, so the totals check flags Mobile.
+        $people = [
+            ['Sam Okafor', 'Senior web developer', 'Web', ['Senior / staff', 'Over 3 years', 'Daily'], 'interviewed', 'you know the web build pipeline better than anyone', 6],
+            ['Riya Desai', 'Web developer', 'Web', ['Early career', 'Under 1 year', 'Daily'], 'interviewed', 'a recent hire sees our setup with fresh eyes', 6],
+            ['Marta Kowalski', 'Frontend lead', 'Web', ['Senior / staff', '1–3 years', 'Weekly'], 'scheduled', 'you lead most of the frontend reviews', 4],
+            ['Lin Zhao', 'iOS developer', 'Mobile', ['Early career', 'Under 1 year', 'Weekly'], 'interviewed', 'you joined recently and work on the mobile release train', 6],
+            ['Diego Alvarez', 'Android developer', 'Mobile', ['Mid-level', '1–3 years', 'Rarely'], 'scheduled', 'flaky Detox tests seem to hit Android hardest', 3],
+            ['Noor Haddad', 'Mobile QA engineer', 'Mobile', ['Mid-level', null, 'Rarely'], 'invited', 'you see every mobile release sign-off', 1],
+            ['Ama Mensah', 'Platform engineer', 'Platform', ['Mid-level', '1–3 years', 'Daily'], 'interviewed', 'you handle most preview-environment requests', 6],
+            ['Ben Fischer', 'Staff platform engineer', 'Platform', ['Senior / staff', 'Over 3 years', 'Weekly'], 'scheduled', 'you designed much of the CI setup', 2],
+            ['Theo Brandt', 'Payments developer', 'Payments', ['Senior / staff', 'Over 3 years', 'Rarely'], 'invited', 'payments on-call has the least documentation', 1],
+            ['Jo Haddad', 'Backend developer', 'Hedgehog (legacy)', ['Senior / staff', 'Over 3 years', 'Rarely'], 'interviewed', 'you work in Hedgehog every day', 6],
+            ['Kenji Mori', 'Backend developer', 'Hedgehog (legacy)', ['Early career', 'Under 1 year', 'Weekly'], 'candidate', 'you are newest to the Hedgehog codebase', 0],
+            ['Grace Lin', 'Backend developer', 'Hedgehog (legacy)', ['Mid-level', '1–3 years', 'Weekly'], 'declined', 'you moved onto Hedgehog last year', 0],
+            ['Omar Shah', 'Engineering manager', null, ['Senior / staff', 'Over 3 years', 'Weekly'], 'candidate', 'you manage across two product teams', 0],
+        ];
+
+        foreach ($people as [$name, $role, $area, $groupValues, $status, $reason, $prepDone]) {
+            $participant = $initiative->participants()->create([
+                'name' => $name,
+                'role' => $role,
+                'status' => $status,
+                'invite_reason' => $reason,
+                'scheduled_at' => $status === 'scheduled' ? now()->addDays(3)->setTime(14, 0) : null,
+            ]);
+
+            $participant->segmentValues()->sync(array_values(array_filter([
+                $area ? $areas[$area] : null,
+                ...array_map(fn (?string $value) => $value ? $values[$value] : null, $groupValues),
+            ])));
+            $participant->completedChecklistItems()->sync(array_slice($checklist, 0, $prepDone));
+        }
+
+        $initiative->messageTemplates()->createMany([
+            [
+                'name' => 'Email invite',
+                'channel' => 'email',
+                'subject' => '30 minutes on what slows you down?',
+                'body' => "Hi {{first_name}},\n\nWe're looking at where developers at Larkspur lose time, so we can fix the right things first. I'd like to hear your view because {{reason}}.\n\nIt's an informal 30-minute conversation about your recent work and the tools around it. There are no right answers, and nothing you say will be attributed to you by name.\n\nWould one day next week work? Send me a couple of times and I'll set it up.\n\nThanks,\n{{facilitator}}\n{{initiative}}",
+                'position' => 0,
+            ],
+            [
+                'name' => 'Chat invite',
+                'channel' => 'chat',
+                'subject' => null,
+                'body' => "Hey {{first_name}}, I'm running short chats about developer friction for {{initiative}}. Would you have 30 minutes next week? I'm asking you because {{reason}}. Anything you share stays anonymous. — {{facilitator}}",
+                'position' => 1,
+            ],
+        ]);
     }
 }

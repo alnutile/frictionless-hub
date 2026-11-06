@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ParticipantStatus;
 use App\Enums\Phase;
 use App\Http\Requests\Initiatives\InitiativeRequest;
 use App\Models\Initiative;
@@ -77,6 +78,10 @@ class InitiativeController extends Controller
             'friction' => ['count' => $initiative->frictionPoints()->count(), 'label' => 'friction points'],
             'story-map' => ['count' => $initiative->storyMapItems()->count(), 'label' => 'story map cards'],
             'quick-rating' => ['count' => $ratings, 'label' => 'ratings'],
+            'listening-tour' => [
+                'count' => $initiative->participants()->where('status', '!=', ParticipantStatus::Declined)->count(),
+                'label' => 'people on the tour · '.$initiative->participants()->where('status', ParticipantStatus::Interviewed)->count().' interviewed',
+            ],
         ];
     }
 

@@ -23,6 +23,7 @@ class Initiative extends Model
         'scope',
         'description',
         'phase',
+        'interview_target',
     ];
 
     /**
@@ -92,6 +93,55 @@ class Initiative extends Model
     }
 
     /**
+     * @return HasMany<SegmentCategory, $this>
+     */
+    public function segmentCategories(): HasMany
+    {
+        return $this->hasMany(SegmentCategory::class)->orderByDesc('is_area')->orderBy('position');
+    }
+
+    /**
+     * @return HasManyThrough<SegmentValue, SegmentCategory, $this>
+     */
+    public function segmentValues(): HasManyThrough
+    {
+        return $this->hasManyThrough(SegmentValue::class, SegmentCategory::class);
+    }
+
+    /**
+     * @return HasMany<Participant, $this>
+     */
+    public function participants(): HasMany
+    {
+        return $this->hasMany(Participant::class)->orderBy('name');
+    }
+
+    /**
+     * @return HasMany<ChecklistItem, $this>
+     */
+    public function checklistItems(): HasMany
+    {
+        return $this->hasMany(ChecklistItem::class)->orderBy('position');
+    }
+
+    /**
+     * @return HasMany<MessageTemplate, $this>
+     */
+    public function messageTemplates(): HasMany
+    {
+        return $this->hasMany(MessageTemplate::class)->orderBy('position');
+    }
+
+    /**
+     * The single work-area category, created on first use.
+     */
+    public function areaCategory(): SegmentCategory
+    {
+        return $this->segmentCategories()->where('is_area', true)->first()
+            ?? $this->segmentCategories()->create(['name' => 'Work area', 'is_area' => true, 'position' => 0]);
+    }
+
+    /**
      * @return HasMany<ActivityNote, $this>
      */
     public function activityNotes(): HasMany
@@ -111,5 +161,7 @@ class Initiative extends Model
         foreach (config('frictionless.default_dimensions') as $position => $name) {
             $this->dimensions()->create(['name' => $name, 'position' => $position]);
         }
+
+        $this->areaCategory();
     }
 }

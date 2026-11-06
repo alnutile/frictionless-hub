@@ -68,9 +68,12 @@ Never commit `.env`, and never copy it from another machine.
 1. Set its `route` in `App\Support\Walkthrough::activities()`. The order follows the workbook steps.
 2. Write the controller under `App\Http\Controllers\Initiatives`, authorizing through `InitiativePolicy` (`view` to read, `update` to change). Use scoped route bindings under `initiatives/{initiative}`.
 3. Write the page in `resources/js/pages/initiatives/` using `InitiativeLayout`, with `data-test` hooks for anything a browser test touches.
-4. Replace the placeholder in `resources/guide/{key}.md` with original guide text.
+4. Rewrite `resources/guide/{key}.md`, replacing its "Planned" description with real guide text (original wording). Until a step has a route, it opens a preview page (`initiatives.planned`) that shows that planned description.
 5. Add a section to `Database\Seeders\LarkspurScenarioSeeder` (the fictional benchmark company) and a progress count in `InitiativeController::progress()`.
-6. Add Feature tests (endpoints) and a Browser journey test.
+6. Add the activity's data to `App\Services\AssistantContext` (aggregates only for anything that identifies people).
+7. Add Feature tests (endpoints) and a Browser journey test.
+
+**Patterns to keep:** anything that groups records (heatmap rows, coverage rows) gets an explicit "No stage" / "No area" row, so nothing silently drops out, and its row totals must add up to the overall total. People's names and notes (participants) are only sent to users who can `update` the initiative, and never to the AI.
 
 ## AI assistant
 

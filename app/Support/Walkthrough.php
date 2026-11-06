@@ -22,7 +22,7 @@ class Walkthrough
             ['key' => 'friction', 'phase' => Phase::Discover, 'title' => 'Log friction', 'route' => 'initiatives.friction'],
             ['key' => 'story-map', 'phase' => Phase::Discover, 'title' => 'Story map', 'route' => 'initiatives.story-map'],
             ['key' => 'quick-rating', 'phase' => Phase::Discover, 'title' => 'Rate the workflow', 'route' => 'initiatives.ratings'],
-            ['key' => 'listening-tour', 'phase' => Phase::Discover, 'title' => 'Plan the listening tour', 'route' => null],
+            ['key' => 'listening-tour', 'phase' => Phase::Discover, 'title' => 'Plan the listening tour', 'route' => 'initiatives.listening-tour'],
             ['key' => 'interviews', 'phase' => Phase::Discover, 'title' => 'Interviews', 'route' => null],
             ['key' => 'themes', 'phase' => Phase::Discover, 'title' => 'Synthesize themes', 'route' => null],
             ['key' => 'stakeholders', 'phase' => Phase::Discover, 'title' => 'Stakeholders', 'route' => null],
