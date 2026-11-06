@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\Role;
 use App\Http\Controllers\Controller;
+use App\Models\Invitation;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,6 +23,14 @@ class UserController extends Controller
                 'email' => $user->email,
                 'role' => $user->role->value,
                 'created_at' => $user->created_at->toDateString(),
+            ]),
+            'invitations' => Invitation::with('inviter:id,name')->whereNull('accepted_at')->latest()->get()->map(fn (Invitation $i) => [
+                'id' => $i->id,
+                'email' => $i->email,
+                'role' => $i->role->label(),
+                'invited_by' => $i->inviter?->name,
+                'expires_at' => $i->expires_at->toDateString(),
+                'status' => $i->status(),
             ]),
             'roles' => array_map(fn (Role $r) => ['value' => $r->value, 'label' => $r->label()], Role::cases()),
         ]);

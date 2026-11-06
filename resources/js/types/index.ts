@@ -26,7 +26,8 @@ export interface SharedData {
     name: string;
     quote: { message: string; author: string };
     auth: Auth;
-    flash: { success: string | null };
+    flash: { success: string | null; invite_link?: { email: string; url: string } | null };
+    registrationOpen: boolean;
     guide: GuidePayload | null;
     [key: string]: unknown;
 }

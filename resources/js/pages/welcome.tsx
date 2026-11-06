@@ -11,7 +11,7 @@ const features = [
 ];
 
 export default function Welcome() {
-    const { auth } = usePage<SharedData>().props;
+    const { auth, registrationOpen } = usePage<SharedData>().props;
 
     return (
         <>
@@ -31,9 +31,11 @@ export default function Welcome() {
                                 <Link href={route('login')} className="hover:bg-accent rounded-md px-4 py-2">
                                     Log in
                                 </Link>
-                                <Link href={route('register')} className="bg-primary text-primary-foreground rounded-md px-4 py-2">
-                                    Register
-                                </Link>
+                                {registrationOpen && (
+                                    <Link href={route('register')} className="bg-primary text-primary-foreground rounded-md px-4 py-2">
+                                        Create admin account
+                                    </Link>
+                                )}
                             </>
                         )}
                     </nav>

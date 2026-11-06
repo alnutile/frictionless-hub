@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\AssistantMessage;
 use App\Models\Initiative;
+use App\Models\User;
 use App\Services\Guide;
 use App\Support\AiSettings;
 use App\Support\Walkthrough;
@@ -55,8 +56,10 @@ class HandleInertiaRequests extends Middleware
                 ],
             ],
             'guide' => fn () => $this->guide($request),
+            'registrationOpen' => fn () => $request->user() === null && ! User::exists(),
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
+                'invite_link' => fn () => $request->session()->get('invite_link'),
             ],
         ]);
     }

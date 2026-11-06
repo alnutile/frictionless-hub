@@ -43,7 +43,7 @@ class AdminUserTest extends TestCase
         $this->assertSame(Role::Admin, $admin->fresh()->role);
     }
 
-    public function test_first_registered_user_becomes_admin_and_later_users_are_viewers(): void
+    public function test_only_the_first_person_can_self_register_and_they_become_admin(): void
     {
         $register = fn (string $email) => $this->post(route('register'), [
             'name' => 'Someone',
@@ -54,9 +54,9 @@ class AdminUserTest extends TestCase
 
         $register('first@example.com');
         auth()->logout();
-        $register('second@example.com');
+        $register('second@example.com')->assertRedirect(route('login'));
 
         $this->assertSame(Role::Admin, User::firstWhere('email', 'first@example.com')->role);
-        $this->assertSame(Role::Viewer, User::firstWhere('email', 'second@example.com')->role);
+        $this->assertFalse(User::where('email', 'second@example.com')->exists());
     }
 }

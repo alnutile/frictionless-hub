@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AiSettingsController;
+use App\Http\Controllers\Admin\InvitationController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AssistantController;
 use App\Http\Controllers\GuideController;
@@ -108,6 +109,9 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('can:admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('users', [UserController::class, 'index'])->name('users.index');
         Route::patch('users/{user}', [UserController::class, 'update'])->name('users.update');
+        Route::post('invitations', [InvitationController::class, 'store'])->name('invitations.store');
+        Route::post('invitations/{invitation}/regenerate', [InvitationController::class, 'regenerate'])->name('invitations.regenerate');
+        Route::delete('invitations/{invitation}', [InvitationController::class, 'destroy'])->name('invitations.destroy');
         Route::put('guide/{key}', [GuideController::class, 'update'])->name('guide.update');
         Route::delete('guide/{key}', [GuideController::class, 'destroy'])->name('guide.destroy');
         Route::get('ai', [AiSettingsController::class, 'edit'])->name('ai.edit');

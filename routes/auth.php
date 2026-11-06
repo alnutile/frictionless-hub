@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\AcceptInvitationController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
@@ -15,6 +16,9 @@ Route::middleware('guest')->group(function () {
         ->name('register');
 
     Route::post('register', [RegisteredUserController::class, 'store']);
+
+    Route::get('invite/{token}', [AcceptInvitationController::class, 'show'])->name('invitations.show');
+    Route::post('invite/{token}', [AcceptInvitationController::class, 'store'])->middleware('throttle:10,1')->name('invitations.accept');
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
