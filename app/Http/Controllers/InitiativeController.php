@@ -2,13 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\InterviewStatus;
-use App\Enums\ParticipantStatus;
 use App\Enums\Phase;
 use App\Http\Requests\Initiatives\InitiativeRequest;
 use App\Models\Initiative;
-use App\Models\Rating;
-use App\Models\StageTool;
+use App\Services\InitiativeProgress;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -60,38 +57,8 @@ class InitiativeController extends Controller
             'initiative' => $this->summary($initiative),
             'canManage' => $request->user()->can('update', $initiative),
             'phases' => Phase::options(),
-            'progress' => $this->progress($initiative),
+            'progress' => InitiativeProgress::for($initiative),
         ]);
-    }
-
-    /**
-     * A short "how much is captured" label per walkthrough activity.
-     *
-     * @return array<string, array{count: int, label: string}>
-     */
-    private function progress(Initiative $initiative): array
-    {
-        $tools = StageTool::whereIn('workflow_stage_id', $initiative->stages()->select('id'))->count();
-        $ratings = Rating::whereIn('rating_item_id', $initiative->ratingItems()->select('rating_items.id'))->count();
-
-        return [
-            'workflow' => ['count' => $initiative->stages()->count(), 'label' => "stages · {$tools} tools"],
-            'friction' => ['count' => $initiative->frictionPoints()->count(), 'label' => 'friction points'],
-            'story-map' => ['count' => $initiative->storyMapItems()->count(), 'label' => 'story map cards'],
-            'quick-rating' => ['count' => $ratings, 'label' => 'ratings'],
-            'interviews' => [
-                'count' => $initiative->interviews()->where('status', InterviewStatus::Complete)->count(),
-                'label' => 'complete · '.$initiative->codes()->count().' codes',
-            ],
-            'themes' => [
-                'count' => $initiative->themes()->count(),
-                'label' => 'themes · '.$initiative->codes()->whereNotNull('theme_id')->count().' of '.$initiative->codes()->count().' codes grouped',
-            ],
-            'listening-tour' => [
-                'count' => $initiative->participants()->where('status', '!=', ParticipantStatus::Declined)->count(),
-                'label' => 'people on the tour · '.$initiative->participants()->where('status', ParticipantStatus::Interviewed)->count().' interviewed',
-            ],
-        ];
     }
 
     public function update(InitiativeRequest $request, Initiative $initiative): RedirectResponse

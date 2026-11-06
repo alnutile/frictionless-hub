@@ -6,6 +6,27 @@
                 "artisan",
                 "boost:mcp"
             ]
+        },
+        "frictionless-hub": {
+            "command": "docker",
+            "args": [
+                "compose",
+                "exec",
+                "-T",
+                "app",
+                "php",
+                "artisan",
+                "mcp:start",
+                "frictionless-hub"
+            ]
+        },
+        "frictionless-hub-native": {
+            "command": "php",
+            "args": [
+                "artisan",
+                "mcp:start",
+                "frictionless-hub"
+            ]
         }
     }
 }

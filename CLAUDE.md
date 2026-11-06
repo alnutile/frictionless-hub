@@ -25,9 +25,9 @@ Follow these steps in order, and report each result to the user.
    - Neither → tell the user to install Docker Desktop or OrbStack (macOS/Windows) or Docker Engine (Linux), then stop.
 2. **Check ports** 8000, 5173, 5432 and 8025 (e.g. `lsof -iTCP -sTCP:LISTEN -P | grep -E ':(8000|5173|5432|8025) '`). If one is taken, prefix commands with `APP_PORT=`, `VITE_PORT=`, `FORWARD_DB_PORT=` or `FORWARD_MAILPIT_DASHBOARD_PORT=`.
 3. **Run setup.**
-   - Docker: `make setup`. This builds images, starts Postgres/Redis/Mailpit/app/queue/vite, runs `composer install` in the container, creates `.env` if missing, generates `APP_KEY`, runs `migrate:fresh --seed` and builds assets.
-   - Native: `composer setup` (SQLite).
-   - Either one **wipes the local database**. On a machine that already has data, ask before running it.
+   - Docker: `make setup`. This builds images, starts Postgres/Redis/Mailpit/app/queue/vite, runs `composer install` in the container, creates `.env` if missing, generates `APP_KEY` only if there isn't one, runs `migrate` and `app:seed-if-empty`, and builds assets.
+   - Native: `composer setup` (SQLite, same non-destructive behavior).
+   - Both are safe to re-run: they never wipe data. Never regenerate an existing `APP_KEY`, because the encrypted settings (the OpenRouter key) depend on it.
 4. **Verify.** `curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/up` should print `200`. Then run `make test` (or `composer test`) and confirm it passes.
 5. **Hand over.** Open http://localhost:8000 and sign in as `priya@larkspur.test` with password `password` (the facilitator who owns the Larkspur benchmark initiative). Admin is `admin@example.com`.
 
@@ -39,7 +39,9 @@ Never commit `.env`, and never copy it from another machine.
 |---|---|---|
 | `setup` | `setup` | First-run setup (see above). Wipes the local DB |
 | `up` / `down` / `destroy` | `run dev` | Start / stop / stop and delete volumes. Native `dev` runs server, queue, pail and Vite |
-| `fresh` | `php artisan migrate:fresh --seed` | Reset to demo data |
+| `update` | `composer install && npm install && php artisan migrate && npm run build` | After `git pull`. Keeps data |
+| `scenario` | `php artisan app:refresh-scenario` | Rebuild only the Larkspur initiative to pick up new seed data |
+| `reset CONFIRM=yes` | `php artisan migrate:fresh --seed` | **Destructive** full wipe. Only when the user explicitly asks |
 | `test` | `test` | Unit + Feature, SQLite in memory |
 | `test-pgsql` | n/a | Unit + Feature against the Postgres `testing` database |
 | n/a | `test:browser` | Browser suite. Runs natively and in CI (needs `npx playwright install chromium` once), not inside the app container |
@@ -85,6 +87,18 @@ Never commit `.env`, and never copy it from another machine.
 - Conversations are saved in `assistant_messages`, private to each user and separate per initiative. The last 20 messages are replayed to the model, and the panel shows the last 30. Replies are rendered as markdown on the server (`Guide::render`, raw HTML stripped). Requests are limited to 20 per minute per user (`throttle:assistant`).
 - Tests never call a real provider. Use `GuideAssistant::fake([...])` and `GuideAssistant::assertPrompted(fn ($prompt) => …)`; `$prompt->agent->instructions()` exposes the full system prompt plus context.
 - Planned: tools so the assistant can add data and write summaries, each confirmed by the user.
+
+## Data preservation (important)
+
+Never tell a user to wipe their database to pick up changes. New migrations go through `make update` / `php artisan migrate`, and new demo data goes through `make scenario`, which replaces only the Larkspur initiative. `LarkspurScenarioSeeder` must stay idempotent and only touch its own initiative and its `@larkspur.test` users.
+
+## MCP server
+
+`app/Mcp/Servers/HubServer.php` is registered as the local (stdio) server `frictionless-hub` in `routes/ai.php`, and in `.mcp.json` for both Docker and native use. Its tools are read-only wrappers over the same services the UI uses (`InitiativeProgress`, `FrictionHeatmap`, `CodeFrequency`, `ThemeWeights`), so the numbers match. When a new step ships, add a read tool for it. Write tools are planned, but must stay local-only, and each one needs explicit approval. Tests use `HubServer::tool(Tool::class, [...])->assertSee(...)`.
+
+## Accounts
+
+Sign-up is invite-only (`invitations` table, token stored as a SHA-256 hash, 7-day single use). `/register` works only while there are no users, to bootstrap the first admin.
 
 ## Roles
 

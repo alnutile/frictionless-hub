@@ -10,7 +10,7 @@ Step 1 (Discover) of the walkthrough: **Map the workflow**, **Log friction** (wi
 
 ## Set up on a new machine
 
-> **Using an AI assistant?** Tell it *"Set this up on my computer"*. The steps it follows are in [`.ai/guidelines/frictionless-hub.md`](.ai/guidelines/frictionless-hub.md), which Claude Code, Codex and OpenCode read automatically.
+> **Using an AI assistant?** Tell it _"Set this up on my computer"_. The steps it follows are in [`.ai/guidelines/frictionless-hub.md`](.ai/guidelines/frictionless-hub.md), which Claude Code, Codex and OpenCode read automatically.
 
 ### Option A: Docker (recommended, matches production)
 
@@ -19,19 +19,21 @@ Needs only **Docker** (Docker Desktop, OrbStack or Docker Engine with Compose v2
 ```bash
 git clone git@github.com:alnutile/frictionless-hub.git
 cd frictionless-hub
-make setup      # builds images, installs deps, creates .env, migrates + seeds Postgres
+make setup      # builds images, installs deps, creates .env, migrates; seeds demo data only into an empty database
 ```
 
-| URL | What |
-|---|---|
+| URL                   | What                                       |
+| --------------------- | ------------------------------------------ |
 | http://localhost:8000 | The app (hot reload through Vite on :5173) |
-| http://localhost:8025 | Mailpit, which catches outgoing email |
+| http://localhost:8025 | Mailpit, which catches outgoing email      |
 
 The stack is app (PHP 8.4 + nginx), queue worker, Vite, Postgres 17, Redis 7 and Mailpit. Run `make` to list every command. The day-to-day ones:
 
 ```bash
 make up / make down     # start / stop (data is kept)
-make fresh              # reset the database to clean demo data
+make update             # after git pull: deps, new migrations, assets (data is kept)
+make scenario           # rebuild only the Larkspur demo initiative (your other initiatives are untouched)
+make reset CONFIRM=yes  # DESTRUCTIVE: wipe everything and reseed
 make test               # unit + feature tests (SQLite in memory)
 make test-pgsql         # same suite against Postgres
 make lint               # pint, prettier, eslint, tsc
@@ -54,12 +56,26 @@ composer run dev    # http://localhost:8000
 
 **You never copy `.env` between machines.** It's git-ignored. `make setup` / `composer setup` create it from `.env.example` and generate a machine-specific `APP_KEY`. In Docker, `compose.yaml` supplies the Postgres, Redis and Mailpit settings as environment variables, which take precedence over `.env`. So the same `.env` works for both options.
 
-Both setup commands **rebuild the local database** with fresh seed data. Run them once per machine. After a `git pull`:
+**Your data is kept.** Setup and update run migrations and never wipe the database; demo data is only seeded into an empty one. After a `git pull`:
 
-| Docker | Native |
-|---|---|
-| `make up` (rebuild with `docker compose build` if the Dockerfile changed) | `composer install && npm install` if lockfiles changed |
-| `make artisan cmd=migrate` | `php artisan migrate` |
+| Docker                                            | Native                                                                    |
+| ------------------------------------------------- | ------------------------------------------------------------------------- |
+| `make update`                                     | `composer install && npm install && php artisan migrate && npm run build` |
+| `make scenario` to pick up new Larkspur demo data | `php artisan app:refresh-scenario`                                        |
+
+`make scenario` replaces only the "Larkspur DevEx 2027" initiative, so do QA experiments in your own initiative if you want them to survive. A full wipe is only ever `make reset CONFIRM=yes` (native: `php artisan migrate:fresh --seed`).
+
+### Accounts and invitations
+
+Sign-up is **invite-only**. An admin opens **Users & roles**, enters an email and role, and gets a single-use link (valid 7 days) to send. The link is shown once, and only a hash is stored; use **New link** to reissue it, or **Revoke** to cancel it. On a brand-new install with no users, the first person can register at `/register` and becomes the admin.
+
+### MCP server (for QA agents and assistants)
+
+A local, **read-only** MCP server exposes the same data and counts as the UI: `list_initiatives`, `initiative_overview`, `list_friction_points`, `list_participants`, `list_interviews`, `get_interview`, `list_codes` and `list_themes`. It runs over stdio and is never exposed over HTTP.
+
+- Claude Code picks it up from `.mcp.json`: `frictionless-hub` uses the Docker stack and `frictionless-hub-native` uses local PHP.
+- To run it by hand: `docker compose exec -T app php artisan mcp:start frictionless-hub`, or open the inspector with `php artisan mcp:inspector frictionless-hub`.
+- It returns participant names and interview notes, so give it the same trust as direct database access.
 
 ### AI assistant
 
