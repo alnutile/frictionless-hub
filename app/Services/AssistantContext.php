@@ -15,6 +15,7 @@ use App\Models\RatingItem;
 use App\Models\SegmentValue;
 use App\Models\StageTool;
 use App\Models\StoryMapItem;
+use App\Models\Theme;
 use App\Models\User;
 use App\Models\WorkflowStage;
 use App\Support\Walkthrough;
@@ -42,6 +43,7 @@ class AssistantContext
         if ($initiative) {
             $sections[] = self::initiative($initiative);
             $sections[] = self::interviews($initiative, $user->can('update', $initiative));
+            $sections[] = self::themes($initiative);
             $sections[] = self::notes($initiative);
         }
 
@@ -256,6 +258,50 @@ class AssistantContext
                 $lines[] = "  - [{$area}] {$note->kind->label()}: {$note->body}".($codes ? " (codes: {$codes})" : '');
             }
         }
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * Themes with their weight and where they were heard. Aggregates only, so safe for every role.
+     */
+    private static function themes(Initiative $initiative): string
+    {
+        $themes = $initiative->themes()->with(['codes', 'frictionPoint'])->get();
+        $codes = $initiative->codes()->get();
+
+        if ($themes->isEmpty() && $codes->isEmpty()) {
+            return '';
+        }
+
+        $notes = $initiative->interviews()->with(['notes.codes', 'participant.segmentValues.category'])->get()
+            ->flatMap(fn ($interview) => $interview->notes->map(fn (InterviewNote $n) => [
+                'id' => $n->id,
+                'interview_id' => $interview->id,
+                'area' => $interview->participant->segmentValues->first(fn (SegmentValue $v) => $v->category->is_area)?->name,
+                'code_ids' => $n->codes->pluck('id')->all(),
+            ]))->values()->all();
+
+        $weights = ThemeWeights::build(
+            $themes->map(fn (Theme $t) => ['id' => $t->id, 'code_ids' => $t->codes->pluck('id')->all()])->all(),
+            $notes,
+        );
+
+        $lines = ['### Themes (from interview codes)'];
+        foreach ($themes as $theme) {
+            $weight = $weights[$theme->id];
+            $areas = collect($weight['areas'])->map(fn (array $a) => "{$a['area']} {$a['interviews']}")->implode(', ');
+            $lines[] = "- {$theme->name}: {$weight['interviews']} interviews, {$weight['notes']} notes"
+                .' | codes: '.($theme->codes->pluck('name')->implode(', ') ?: 'none')
+                .($areas ? " | heard from: {$areas}" : '')
+                .($theme->impact ? " | impact {$theme->impact->value}" : '')
+                .($theme->effort ? " | effort {$theme->effort->value}" : '')
+                .($theme->frictionPoint ? " | in friction log as \"{$theme->frictionPoint->title}\"" : ' | not in friction log')
+                .($theme->summary ? " — {$theme->summary}" : '');
+        }
+
+        $unthemed = $codes->whereNull('theme_id')->pluck('name');
+        $lines[] = '- Codes not in any theme: '.($unthemed->implode(', ') ?: 'none');
 
         return implode("\n", $lines);
     }

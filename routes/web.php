@@ -20,6 +20,7 @@ use App\Http\Controllers\Initiatives\RatingController;
 use App\Http\Controllers\Initiatives\SegmentController;
 use App\Http\Controllers\Initiatives\StageToolController;
 use App\Http\Controllers\Initiatives\StoryMapController;
+use App\Http\Controllers\Initiatives\ThemeController;
 use App\Http\Controllers\Initiatives\WorkflowStageController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -94,6 +95,14 @@ Route::middleware(['auth'])->group(function () {
         Route::post('interviews/{interview}/notes/{interviewNote}/toggle', [InterviewNoteController::class, 'toggleDone'])->name('interview-notes.toggle');
         Route::post('interviews/{interview}/notes/{interviewNote}/promote', [InterviewNoteController::class, 'promote'])->name('interview-notes.promote');
         Route::delete('interviews/{interview}/notes/{interviewNote}', [InterviewNoteController::class, 'destroy'])->name('interview-notes.destroy');
+        Route::get('themes', [ThemeController::class, 'index'])->name('themes');
+        Route::post('themes', [ThemeController::class, 'store'])->name('themes.store');
+        Route::get('themes/{theme}', [ThemeController::class, 'show'])->name('themes.show');
+        Route::patch('themes/{theme}', [ThemeController::class, 'update'])->name('themes.update');
+        Route::delete('themes/{theme}', [ThemeController::class, 'destroy'])->name('themes.destroy');
+        Route::post('themes/{theme}/promote', [ThemeController::class, 'promote'])->name('themes.promote');
+        Route::put('themes/{theme}/link', [ThemeController::class, 'link'])->name('themes.link');
+        Route::put('codes/{code}/theme', [ThemeController::class, 'assignCode'])->name('codes.theme');
         Route::post('codes', [CodeController::class, 'store'])->name('codes.store');
         Route::delete('codes/{code}', [CodeController::class, 'destroy'])->name('codes.destroy');
 

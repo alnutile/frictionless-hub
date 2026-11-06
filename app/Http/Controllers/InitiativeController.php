@@ -83,6 +83,10 @@ class InitiativeController extends Controller
                 'count' => $initiative->interviews()->where('status', InterviewStatus::Complete)->count(),
                 'label' => 'complete · '.$initiative->codes()->count().' codes',
             ],
+            'themes' => [
+                'count' => $initiative->themes()->count(),
+                'label' => 'themes · '.$initiative->codes()->whereNotNull('theme_id')->count().' of '.$initiative->codes()->count().' codes grouped',
+            ],
             'listening-tour' => [
                 'count' => $initiative->participants()->where('status', '!=', ParticipantStatus::Declined)->count(),
                 'label' => 'people on the tour · '.$initiative->participants()->where('status', ParticipantStatus::Interviewed)->count().' interviewed',

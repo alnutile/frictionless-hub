@@ -52,6 +52,7 @@ class LarkspurScenarioSeeder extends Seeder
             $this->seedRatings($initiative);
             $this->seedListeningTour($initiative);
             $this->seedInterviews($initiative);
+            $this->seedThemes($initiative);
         });
     }
 
@@ -396,6 +397,57 @@ class LarkspurScenarioSeeder extends Seeder
                 }
 
                 $model->codes()->sync(array_map(fn (string $code) => $codes[$code], $noteCodes));
+            }
+        }
+    }
+
+    /**
+     * Built on the step 6 codes. env-setup, ai-assistants and on-call are left unthemed on purpose.
+     */
+    private function seedThemes(Initiative $initiative): void
+    {
+        $friction = $initiative->frictionPoints()->pluck('id', 'title');
+
+        $themes = [
+            [
+                'name' => 'Waiting on builds and environments',
+                'summary' => 'Developers lose focus waiting on slow or flaky CI runs and on hand-built preview environments. It shows up in web, mobile, platform and the Hedgehog monolith alike.',
+                'impact' => 'high',
+                'effort' => 'high',
+                'solutions' => "Split and parallelize the Hedgehog suite; quarantine the flakiest Detox tests.\nSelf-service preview environments from a pull-request label.",
+                'codes' => ['slow-ci', 'flaky-tests', 'preview-envs'],
+                'friction' => 'Hedgehog CI suite takes ~38 minutes',
+            ],
+            [
+                'name' => 'Know-how lives in people, not docs',
+                'summary' => 'Setup steps, requirements and internal APIs are learned by asking colleagues. New hires depend on a buddy, and senior people answer the same questions repeatedly.',
+                'impact' => 'high',
+                'effort' => 'medium',
+                'solutions' => "A maintained getting-started guide owned by platform.\nMove Hedgehog requirements into Linear alongside other teams' work.",
+                'codes' => ['docs-gaps', 'onboarding'],
+                'friction' => null,
+            ],
+            [
+                'name' => 'Reviews and releases stall on people',
+                'summary' => 'Work that is ready waits on reviewers who have moved teams and on manual release sign-offs spread across tools.',
+                'impact' => 'medium',
+                'effort' => 'low',
+                'solutions' => "Clean up CODEOWNERS and add a weekly check for owners who've left.\nCollapse mobile sign-offs into one approval step.",
+                'codes' => ['review-wait', 'release-process'],
+                'friction' => 'PRs wait on reviewers listed in a stale CODEOWNERS file',
+            ],
+        ];
+
+        foreach ($themes as $position => $data) {
+            $theme = $initiative->themes()->create([
+                ...collect($data)->only(['name', 'summary', 'impact', 'effort', 'solutions'])->all(),
+                'position' => $position,
+            ]);
+
+            $initiative->codes()->whereIn('name', $data['codes'])->update(['theme_id' => $theme->id]);
+
+            if ($data['friction']) {
+                $theme->forceFill(['friction_point_id' => $friction[$data['friction']]])->save();
             }
         }
     }

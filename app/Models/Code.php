@@ -27,6 +27,14 @@ class Code extends Model
     }
 
     /**
+     * @return BelongsTo<Theme, $this>
+     */
+    public function theme(): BelongsTo
+    {
+        return $this->belongsTo(Theme::class);
+    }
+
+    /**
      * @return BelongsToMany<InterviewNote, $this>
      */
     public function notes(): BelongsToMany

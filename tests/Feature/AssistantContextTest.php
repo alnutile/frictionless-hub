@@ -25,7 +25,7 @@ class AssistantContextTest extends TestCase
         $this->assertStringContainsString('- Role: Viewer', $context);
         $this->assertStringContainsString('- Can edit this initiative: no', $context);
         $this->assertStringContainsString('3. [Discover] Story map ← current screen', $context);
-        $this->assertStringContainsString('7. [Discover] Synthesize themes (not built yet)', $context);
+        $this->assertStringContainsString('8. [Discover] Stakeholders (not built yet)', $context);
         $this->assertStringContainsString('## Current screen: Story map', $context);
         $this->assertStringContainsString('- Coding [AI-assisted]: VS Code, GitHub, Cursor (AI), Copilot (AI), Local Docker stack', $context);
         $this->assertStringContainsString('Hedgehog CI suite takes ~38 minutes | Building | Multiple times a day | 5 |', $context);

@@ -157,6 +157,14 @@ class Initiative extends Model
     }
 
     /**
+     * @return HasMany<Theme, $this>
+     */
+    public function themes(): HasMany
+    {
+        return $this->hasMany(Theme::class)->orderBy('position');
+    }
+
+    /**
      * The single work-area category, created on first use.
      */
     public function areaCategory(): SegmentCategory

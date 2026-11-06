@@ -65,9 +65,9 @@ class PlannedActivityTest extends TestCase
         $initiative = Initiative::factory()->create();
 
         $this->actingAs(User::factory()->create())
-            ->get(route('initiatives.planned', [$initiative, 'themes']))
+            ->get(route('initiatives.planned', [$initiative, 'stakeholders']))
             ->assertInertia(fn (Assert $page) => $page
                 ->where('builtBefore', fn ($built) => collect($built)->every(fn ($a) => $a['route'] !== null) && count($built) > 0)
-                ->where('next.key', 'stakeholders'));
+                ->where('next.key', 'quick-wins'));
     }
 }
