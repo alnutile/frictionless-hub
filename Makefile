@@ -18,13 +18,14 @@ help: ## List available commands
 ## ---- Local development --------------------------------------------------
 
 .PHONY: setup
-setup: ## First run on a machine: build images, install deps, create .env, migrate and seed
+setup: ## First run on a machine: build, install, create .env, migrate; seeds demo data only into an empty DB
 	@test -f .env || cp .env.example .env
 	$(COMPOSE) build
 	$(COMPOSE) up -d --wait pgsql redis mailpit app
 	$(APP) composer install --no-interaction
 	@grep -q '^APP_KEY=base64' .env || $(APP) php artisan key:generate --no-interaction
-	$(APP) php artisan migrate:fresh --seed --force
+	$(APP) php artisan migrate --force
+	$(APP) php artisan app:seed-if-empty
 	$(COMPOSE) run --rm --no-deps vite sh -c "npm ci --no-audit --no-fund && npm run build"
 	$(COMPOSE) up -d
 	@echo ""
@@ -44,8 +45,21 @@ down: ## Stop the stack (keeps the database)
 destroy: ## Stop the stack and delete its volumes (database, redis, node_modules)
 	$(COMPOSE) down -v
 
-.PHONY: fresh
-fresh: ## Reset the database to clean demo data
+.PHONY: update
+update: ## After git pull: install deps, run new migrations, rebuild assets. Keeps your data.
+	$(COMPOSE) up -d --wait pgsql redis app
+	$(APP) composer install --no-interaction
+	$(APP) php artisan migrate --force
+	$(COMPOSE) run --rm --no-deps vite sh -c "npm ci --no-audit --no-fund && npm run build"
+	$(COMPOSE) up -d
+
+.PHONY: scenario
+scenario: ## Rebuild only the Larkspur demo initiative (other initiatives are untouched)
+	$(APP) php artisan app:refresh-scenario --force
+
+.PHONY: reset
+reset: ## DESTRUCTIVE: wipe the database and reseed. Requires CONFIRM=yes
+	@test "$(CONFIRM)" = "yes" || (echo "This deletes ALL data. Run: make reset CONFIRM=yes"; exit 1)
 	$(APP) php artisan migrate:fresh --seed --force
 
 .PHONY: logs
