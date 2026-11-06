@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * Someone on the listening tour. Identifying details are only shown to people who can manage the initiative.
@@ -54,6 +55,14 @@ class Participant extends Model
     public function segmentValues(): BelongsToMany
     {
         return $this->belongsToMany(SegmentValue::class);
+    }
+
+    /**
+     * @return HasOne<Interview, $this>
+     */
+    public function interview(): HasOne
+    {
+        return $this->hasOne(Interview::class);
     }
 
     /**

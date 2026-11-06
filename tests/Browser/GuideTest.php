@@ -78,9 +78,9 @@ it('opens planned steps as a roadmap preview instead of a dead end', function ()
 
     visit(route('initiatives.show', $initiative))
         ->assertSeeIn('@phase-quick_wins', 'PLANNED')
-        ->click('@ladder-interviews')
-        ->assertPathIs("/initiatives/{$initiative->id}/planned/interviews")
-        ->assertSeeIn('@planned-activity', 'Step 6 · Discover')
+        ->click('@ladder-themes')
+        ->assertPathIs("/initiatives/{$initiative->id}/planned/themes")
+        ->assertSeeIn('@planned-activity', 'Step 7 · Discover')
         ->assertSeeIn('@planned-activity', 'What it will do')
         ->assertSeeIn('@planned-activity', 'You can work on these steps now')
         ->assertNoJavaScriptErrors();

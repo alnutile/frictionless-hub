@@ -1,11 +1,19 @@
-**Planned.** This step isn't built yet.
+**Goal:** capture each conversation in the same shape, so you can compare across people and spot what keeps coming up.
 
-**What it's for:** capturing each conversation in a consistent shape, so later steps can compare across them.
+**How to use it**
 
-**What it will do**
+1. Start notes from **Ready to interview**. Everyone on the step 5 tour who doesn't have notes yet is listed there.
+2. Note each point separately: **pain points**, **bright spots**, **quotes**, **observations** and **follow-ups**. One idea per note makes coding and themes much easier later.
+3. Give pain points a **stage** when you can. **Add to friction log** copies a pain point into step 2 without the person's name.
+4. **Code** your notes with short tags (for example `slow-ci` or `docs-gaps`). Reuse existing codes where they fit, and create new ones when nothing does.
+5. **Mark complete** when you're done. The person is then marked as interviewed on the tour.
 
-- A structured notes form per participant: role, tools used, pain points, bright spots and follow-ups.
-- Tag notes with codes as you go, ready for theme synthesis.
-- Optional transcript upload, with the assistant able to suggest codes for you to confirm.
+**Reading "Codes so far"**
 
-**Builds on:** the participants and checklist from step 5.
+Sort by **interviews**, not by notes. A code that comes up in five different conversations is stronger evidence than one person mentioning something five times. These codes become themes in step 7.
+
+**Tips**
+
+- Write notes soon after the conversation, while details are fresh.
+- Keep quotes short, and never attribute them by name outside this screen.
+- Bright spots matter too. They show what to protect while you fix the rest.

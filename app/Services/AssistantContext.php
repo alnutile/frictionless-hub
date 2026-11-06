@@ -2,10 +2,13 @@
 
 namespace App\Services;
 
+use App\Enums\InterviewStatus;
 use App\Enums\ParticipantStatus;
+use App\Models\Code;
 use App\Models\Dimension;
 use App\Models\FrictionPoint;
 use App\Models\Initiative;
+use App\Models\InterviewNote;
 use App\Models\Participant;
 use App\Models\RatingGroup;
 use App\Models\RatingItem;
@@ -38,6 +41,7 @@ class AssistantContext
 
         if ($initiative) {
             $sections[] = self::initiative($initiative);
+            $sections[] = self::interviews($initiative, $user->can('update', $initiative));
             $sections[] = self::notes($initiative);
         }
 
@@ -209,6 +213,48 @@ class AssistantContext
                 fn (Participant $p) => $p->segmentValues->contains('id', $area->id),
             )->count());
             $lines[] = '- People planned per work area: '.$perArea->implode(', ');
+        }
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * Code counts for everyone. Note text only for people who run the initiative,
+     * labelled by work area and never by name.
+     */
+    private static function interviews(Initiative $initiative, bool $canManage): string
+    {
+        $interviews = $initiative->interviews()->with(['notes.codes', 'participant.segmentValues.category'])->get();
+
+        if ($interviews->isEmpty()) {
+            return '';
+        }
+
+        $notes = $interviews->flatMap->notes;
+        $lines = ['### Interviews'];
+        $lines[] = '- Complete: '.$interviews->where('status', InterviewStatus::Complete)->count().', in progress: '.$interviews->where('status', InterviewStatus::Draft)->count();
+
+        $frequency = CodeFrequency::build(
+            $initiative->codes()->get()->map(fn (Code $c) => ['id' => $c->id, 'name' => $c->name])->all(),
+            $notes->map(fn (InterviewNote $n) => ['interview_id' => $n->interview_id, 'code_ids' => $n->codes->pluck('id')->all()])->all(),
+        );
+        $lines[] = '- Codes (mentioned in N interviews): '.(collect($frequency)
+            ->filter(fn (array $c) => $c['interviews'] > 0)
+            ->map(fn (array $c) => "{$c['name']} {$c['interviews']}")
+            ->implode(', ') ?: 'none yet');
+
+        if (! $canManage) {
+            return implode("\n", $lines);
+        }
+
+        $lines[] = '- Notes (by work area; names withheld):';
+        foreach ($interviews as $interview) {
+            $area = $interview->participant->segmentValues->first(fn (SegmentValue $v) => $v->category->is_area)?->name ?? 'unknown area';
+
+            foreach ($interview->notes as $note) {
+                $codes = $note->codes->pluck('name')->implode(', ');
+                $lines[] = "  - [{$area}] {$note->kind->label()}: {$note->body}".($codes ? " (codes: {$codes})" : '');
+            }
         }
 
         return implode("\n", $lines);

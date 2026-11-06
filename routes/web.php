@@ -6,8 +6,11 @@ use App\Http\Controllers\AssistantController;
 use App\Http\Controllers\GuideController;
 use App\Http\Controllers\InitiativeController;
 use App\Http\Controllers\Initiatives\ChecklistItemController;
+use App\Http\Controllers\Initiatives\CodeController;
 use App\Http\Controllers\Initiatives\DimensionController;
 use App\Http\Controllers\Initiatives\FrictionPointController;
+use App\Http\Controllers\Initiatives\InterviewController;
+use App\Http\Controllers\Initiatives\InterviewNoteController;
 use App\Http\Controllers\Initiatives\ListeningTourController;
 use App\Http\Controllers\Initiatives\MessageTemplateController;
 use App\Http\Controllers\Initiatives\ParticipantController;
@@ -79,6 +82,19 @@ Route::middleware(['auth'])->group(function () {
         Route::post('message-templates', [MessageTemplateController::class, 'store'])->name('message-templates.store');
         Route::patch('message-templates/{messageTemplate}', [MessageTemplateController::class, 'update'])->name('message-templates.update');
         Route::delete('message-templates/{messageTemplate}', [MessageTemplateController::class, 'destroy'])->name('message-templates.destroy');
+
+        Route::get('interviews', [InterviewController::class, 'index'])->name('interviews');
+        Route::post('interviews', [InterviewController::class, 'store'])->name('interviews.store');
+        Route::get('interviews/{interview}', [InterviewController::class, 'show'])->name('interviews.show');
+        Route::patch('interviews/{interview}', [InterviewController::class, 'update'])->name('interviews.update');
+        Route::delete('interviews/{interview}', [InterviewController::class, 'destroy'])->name('interviews.destroy');
+        Route::post('interviews/{interview}/notes', [InterviewNoteController::class, 'store'])->name('interview-notes.store');
+        Route::patch('interviews/{interview}/notes/{interviewNote}', [InterviewNoteController::class, 'update'])->name('interview-notes.update');
+        Route::post('interviews/{interview}/notes/{interviewNote}/toggle', [InterviewNoteController::class, 'toggleDone'])->name('interview-notes.toggle');
+        Route::post('interviews/{interview}/notes/{interviewNote}/promote', [InterviewNoteController::class, 'promote'])->name('interview-notes.promote');
+        Route::delete('interviews/{interview}/notes/{interviewNote}', [InterviewNoteController::class, 'destroy'])->name('interview-notes.destroy');
+        Route::post('codes', [CodeController::class, 'store'])->name('codes.store');
+        Route::delete('codes/{code}', [CodeController::class, 'destroy'])->name('codes.destroy');
 
         Route::put('notes/{key}', [GuideController::class, 'updateNote'])->name('notes.update');
 

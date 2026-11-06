@@ -133,6 +133,30 @@ class Initiative extends Model
     }
 
     /**
+     * @return HasMany<Interview, $this>
+     */
+    public function interviews(): HasMany
+    {
+        return $this->hasMany(Interview::class);
+    }
+
+    /**
+     * @return HasManyThrough<InterviewNote, Interview, $this>
+     */
+    public function interviewNotes(): HasManyThrough
+    {
+        return $this->hasManyThrough(InterviewNote::class, Interview::class);
+    }
+
+    /**
+     * @return HasMany<Code, $this>
+     */
+    public function codes(): HasMany
+    {
+        return $this->hasMany(Code::class)->orderBy('name');
+    }
+
+    /**
      * The single work-area category, created on first use.
      */
     public function areaCategory(): SegmentCategory

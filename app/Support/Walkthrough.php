@@ -23,7 +23,7 @@ class Walkthrough
             ['key' => 'story-map', 'phase' => Phase::Discover, 'title' => 'Story map', 'route' => 'initiatives.story-map'],
             ['key' => 'quick-rating', 'phase' => Phase::Discover, 'title' => 'Rate the workflow', 'route' => 'initiatives.ratings'],
             ['key' => 'listening-tour', 'phase' => Phase::Discover, 'title' => 'Plan the listening tour', 'route' => 'initiatives.listening-tour'],
-            ['key' => 'interviews', 'phase' => Phase::Discover, 'title' => 'Interviews', 'route' => null],
+            ['key' => 'interviews', 'phase' => Phase::Discover, 'title' => 'Interviews', 'route' => 'initiatives.interviews'],
             ['key' => 'themes', 'phase' => Phase::Discover, 'title' => 'Synthesize themes', 'route' => null],
             ['key' => 'stakeholders', 'phase' => Phase::Discover, 'title' => 'Stakeholders', 'route' => null],
             ['key' => 'quick-wins', 'phase' => Phase::QuickWins, 'title' => 'Score quick wins', 'route' => null],
@@ -74,6 +74,7 @@ class Walkthrough
         return match ($routeName) {
             'initiatives.index' => 'start',
             'initiatives.show' => 'overview',
+            'initiatives.interviews.show' => 'interviews',
             default => null,
         };
     }

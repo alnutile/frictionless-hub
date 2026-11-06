@@ -51,6 +51,7 @@ class LarkspurScenarioSeeder extends Seeder
             $this->seedStoryMap($initiative);
             $this->seedRatings($initiative);
             $this->seedListeningTour($initiative);
+            $this->seedInterviews($initiative);
         });
     }
 
@@ -318,5 +319,84 @@ class LarkspurScenarioSeeder extends Seeder
                 'position' => 1,
             ],
         ]);
+    }
+
+    private function seedInterviews(Initiative $initiative): void
+    {
+        $codes = [];
+        foreach (['slow-ci', 'flaky-tests', 'env-setup', 'docs-gaps', 'review-wait', 'preview-envs', 'release-process', 'ai-assistants', 'on-call', 'onboarding'] as $name) {
+            $codes[$name] = $initiative->codes()->create(['name' => $name])->id;
+        }
+
+        $stages = $initiative->stages()->pluck('id', 'name');
+        $friction = $initiative->frictionPoints()->pluck('id', 'title');
+
+        // [participant, days ago, responsibilities, tools, notes: [kind, body, codes, stage?, friction title?, owner?, done?]]
+        $interviews = [
+            ['Sam Okafor', 12, 'Builds and maintains the customer-facing scheduling UI; reviews most web pull requests.', 'VS Code, Cursor, GitHub, Playwright, Linear', [
+                ['pain_point', 'Waits most afternoons for reviews from people listed in CODEOWNERS who have moved teams.', ['review-wait'], 'Reviewing', 'PRs wait on reviewers listed in a stale CODEOWNERS file'],
+                ['pain_point', 'Preview environments take a day, so he tests risky changes in staging and hopes for the best.', ['preview-envs'], 'Deployment'],
+                ['bright_spot', 'The web deploy pipeline is fast and trusted; shipping small changes feels easy.', ['release-process']],
+                ['quote', 'The code is the quick part. Waiting for a reviewer is the job.', ['review-wait']],
+                ['follow_up', 'Ask the platform team whether preview environments could be self-service.', [], null, null, 'Priya'],
+            ]],
+            ['Riya Desai', 10, 'Works on web features; joined four months ago.', 'VS Code, Copilot, GitHub, Notion', [
+                ['pain_point', 'First week was spent getting the local Docker stack running; fixes were scattered across Slack threads.', ['env-setup', 'onboarding', 'docs-gaps'], 'Coding'],
+                ['pain_point', 'Hard to find which internal SDK call to use; the AI assistant suggests public APIs instead.', ['ai-assistants', 'docs-gaps'], 'Coding', 'AI assistant suggestions ignore the internal SDK'],
+                ['bright_spot', 'Her onboarding buddy made a huge difference and answered questions quickly.', ['onboarding']],
+                ['observation', 'New hires seem to rely on individual helpers rather than documentation.', ['onboarding', 'docs-gaps']],
+            ]],
+            ['Lin Zhao', 9, 'iOS developer on the field-technician app.', 'Xcode, Fastlane, Detox, GitHub', [
+                ['pain_point', 'Detox tests fail randomly on CI, so merges are retried two or three times.', ['flaky-tests', 'slow-ci'], 'Testing'],
+                ['pain_point', 'Each release needs three sign-offs in three different tools; a missed approval delays the train.', ['release-process'], 'Deployment'],
+                ['quote', 'I spend more time babysitting the pipeline than writing Swift.', ['flaky-tests']],
+                ['follow_up', 'Share the list of the flakiest Detox tests with the mobile lead.', [], null, null, 'Lin', true],
+            ]],
+            ['Ama Mensah', 7, 'Platform engineer; handles CI infrastructure and environment requests.', 'GitHub Actions, Buildkite, Argo CD, Kubernetes, Datadog', [
+                ['pain_point', 'Preview environment requests arrive through a form and take a big share of her week to fulfil by hand.', ['preview-envs'], 'Deployment', 'Preview environments take a day to get'],
+                ['bright_spot', 'Argo CD has made web deploys boring in a good way.', ['release-process']],
+                ['observation', 'Platform team capacity is the bottleneck behind several complaints from other teams.', ['preview-envs', 'slow-ci']],
+                ['follow_up', 'Estimate the effort to automate preview environments.', [], null, null, 'Ama'],
+            ]],
+            ['Jo Haddad', 5, 'Backend developer on the Hedgehog billing monolith.', 'RubyMine, RSpec, Buildkite, Notion', [
+                ['pain_point', 'The Hedgehog CI suite takes about 38 minutes, and he loses focus while waiting.', ['slow-ci'], 'Building', 'Hedgehog CI suite takes ~38 minutes'],
+                ['pain_point', 'Requirements live in scattered Notion pages, so he checks with product before starting most tickets.', ['docs-gaps'], 'Planning'],
+                ['pain_point', 'Payments alerts have no runbooks, and on-call means reading code at night.', ['on-call', 'docs-gaps'], 'Maintenance'],
+                ['quote', 'Kick off CI, make coffee, come back, re-run the flaky spec. That is my morning.', ['slow-ci', 'flaky-tests']],
+                ['bright_spot', 'The Hedgehog team is close-knit and quick to help each other.', []],
+            ]],
+        ];
+
+        foreach ($interviews as [$name, $daysAgo, $responsibilities, $tools, $notes]) {
+            $participant = $initiative->participants()->where('name', $name)->firstOrFail();
+
+            $interview = $initiative->interviews()->create([
+                'participant_id' => $participant->id,
+                'interviewer_id' => $this->people['priya']->id,
+                'conducted_at' => now()->subDays($daysAgo)->setTime(10, 0),
+                'status' => 'complete',
+                'responsibilities' => $responsibilities,
+                'tools' => $tools,
+            ]);
+
+            foreach ($notes as $position => $note) {
+                [$kind, $body, $noteCodes] = $note;
+
+                $model = $interview->notes()->create([
+                    'kind' => $kind,
+                    'body' => $body,
+                    'workflow_stage_id' => isset($note[3]) ? $stages[$note[3]] : null,
+                    'owner' => $note[5] ?? null,
+                    'done' => $note[6] ?? false,
+                    'position' => $position,
+                ]);
+
+                if (isset($note[4])) {
+                    $model->forceFill(['friction_point_id' => $friction[$note[4]]])->save();
+                }
+
+                $model->codes()->sync(array_map(fn (string $code) => $codes[$code], $noteCodes));
+            }
+        }
     }
 }
