@@ -5,6 +5,9 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Symfony\Component\HttpFoundation\Response;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -22,5 +25,21 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // Show an in-app error page instead of the bare framework one. 500/503 keep the
+        // detailed debug page locally so errors stay easy to diagnose.
+        $exceptions->respond(function (Response $response, Throwable $exception, Request $request) {
+            $status = $response->getStatusCode();
+            $handled = in_array($status, [403, 404, 419], true)
+                || (in_array($status, [500, 503], true) && ! app()->hasDebugModeEnabled());
+
+            if (! $handled || $request->expectsJson()) {
+                return $response;
+            }
+
+            return Inertia::render('error', [
+                'status' => $status,
+                'isInitiative' => $request->is('initiatives/*'),
+                'signedIn' => $request->user() !== null,
+            ])->toResponse($request)->setStatusCode($status);
+        });
     })->create();

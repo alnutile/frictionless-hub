@@ -247,4 +247,18 @@ class InterviewTest extends TestCase
 
         $this->assertSame('Hedgehog CI suite takes ~38 minutes', $note->frictionPoint?->title);
     }
+
+    public function test_list_reports_note_counts_and_tour_size_for_the_empty_state_copy(): void
+    {
+        $this->actingAs($this->initiative->owner)
+            ->get(route('initiatives.interviews', $this->initiative))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('tourSize', 13)
+                ->where('interviews', fn ($rows) => collect($rows)->every(fn ($row) => $row['note_count'] > 0)));
+
+        $empty = Initiative::factory()->create();
+        $this->actingAs($empty->owner)
+            ->get(route('initiatives.interviews', $empty))
+            ->assertInertia(fn (Assert $page) => $page->where('tourSize', 0)->where('toInterview', []));
+    }
 }

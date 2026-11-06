@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import InitiativeLayout from '@/layouts/initiative-layout';
+import { cn } from '@/lib/utils';
 import { type InitiativeSummary, type Option } from '@/types';
 import { Link, router, useForm } from '@inertiajs/react';
 import { NotebookPen, Plus, X } from 'lucide-react';
@@ -24,6 +25,7 @@ interface InterviewRow {
     status: 'draft' | 'complete';
     counts: Record<string, number>;
     codes: string[];
+    note_count: number;
 }
 
 interface Props {
@@ -35,27 +37,37 @@ interface Props {
     interviews: InterviewRow[] | null;
     toInterview: { id: number; name: string; status: string; scheduled_at: string | null }[] | null;
     openFollowUps: { id: number; body: string; owner: string | null; interview_id: number; participant: string | null }[] | null;
+    tourSize: number;
 }
 
-export default function Interviews({ initiative, canManage, codeFrequency, stats, kinds, interviews, toInterview, openFollowUps }: Props) {
-    const tiles = [
+export default function Interviews({ initiative, canManage, codeFrequency, stats, kinds, interviews, toInterview, openFollowUps, tourSize }: Props) {
+    const tiles: { label: string; value: number; href?: string }[] = [
         { label: 'Interviews complete', value: stats.complete },
         { label: 'In progress', value: stats.draft },
         { label: 'Pain points noted', value: stats.by_kind.pain_point ?? 0 },
-        { label: 'Open follow-ups', value: stats.open_follow_ups },
+        { label: 'Open follow-ups', value: stats.open_follow_ups, href: '#open-follow-ups' },
     ];
 
     return (
         <InitiativeLayout initiative={initiative} title="Interviews">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-test="interview-stats">
-                {tiles.map((t) => (
-                    <Card key={t.label} className="gap-1 py-4">
-                        <CardHeader className="px-4">
-                            <CardDescription>{t.label}</CardDescription>
-                            <CardTitle className="text-3xl tabular-nums">{t.value}</CardTitle>
-                        </CardHeader>
-                    </Card>
-                ))}
+                {tiles.map((t) => {
+                    const card = (
+                        <Card className={cn('gap-1 py-4', t.href && canManage && 'hover:border-primary/50')}>
+                            <CardHeader className="px-4">
+                                <CardDescription>{t.label}</CardDescription>
+                                <CardTitle className="text-3xl tabular-nums">{t.value}</CardTitle>
+                            </CardHeader>
+                        </Card>
+                    );
+                    return t.href && canManage && t.value > 0 ? (
+                        <a key={t.label} href={t.href} data-test="follow-ups-tile">
+                            {card}
+                        </a>
+                    ) : (
+                        <div key={t.label}>{card}</div>
+                    );
+                })}
             </div>
 
             <div className="grid gap-6 lg:grid-cols-3">
@@ -70,13 +82,13 @@ export default function Interviews({ initiative, canManage, codeFrequency, stats
                             </CardHeader>
                             <CardContent>
                                 {toInterview.length === 0 ? (
-                                    <p className="text-muted-foreground text-sm">
-                                        Everyone on the tour has notes.{' '}
+                                    <p className="text-muted-foreground text-sm" data-test="ready-empty">
+                                        {tourSize === 0 ? 'No one is on the tour yet. ' : 'Everyone on the tour has notes. '}
                                         <Link
                                             href={route('initiatives.listening-tour', initiative.id)}
                                             className="text-teal-600 underline dark:text-teal-400"
                                         >
-                                            Add more people in step 5
+                                            {tourSize === 0 ? 'Plan the tour in step 5' : 'Add more people in step 5'}
                                         </Link>
                                         .
                                     </p>
@@ -109,6 +121,31 @@ export default function Interviews({ initiative, canManage, codeFrequency, stats
                         </Card>
                     )}
 
+                    {canManage && openFollowUps && openFollowUps.length > 0 && (
+                        <Card id="open-follow-ups" className="scroll-mt-4" data-test="open-follow-ups">
+                            <CardHeader>
+                                <CardTitle>Open follow-ups</CardTitle>
+                                <CardDescription>Added in the Follow-ups section of each interview. Tick them off there.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <ul className="space-y-1.5 text-sm">
+                                    {openFollowUps.map((f) => (
+                                        <li key={f.id}>
+                                            <Link
+                                                href={route('initiatives.interviews.show', [initiative.id, f.interview_id])}
+                                                className="hover:underline"
+                                            >
+                                                {f.body}
+                                            </Link>
+                                            <span className="text-muted-foreground">
+                                                {f.owner && ` · ${f.owner}`} · from {f.participant}
+                                            </span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </CardContent>
+                        </Card>
+                    )}
                     {canManage && interviews ? (
                         <Card>
                             <CardHeader>
@@ -141,10 +178,18 @@ export default function Interviews({ initiative, canManage, codeFrequency, stats
                                                     </td>
                                                     <td className="px-3 py-2 whitespace-nowrap">
                                                         {i.conducted_at ?? '—'}
-                                                        <div>
+                                                        <div className="flex flex-wrap gap-1">
                                                             <Badge variant={i.status === 'complete' ? 'default' : 'outline'}>
                                                                 {i.status === 'complete' ? 'Complete' : 'Draft'}
                                                             </Badge>
+                                                            {i.status === 'complete' && i.note_count === 0 && (
+                                                                <Badge
+                                                                    variant="outline"
+                                                                    className="border-amber-400 text-amber-700 dark:text-amber-300"
+                                                                >
+                                                                    No notes
+                                                                </Badge>
+                                                            )}
                                                         </div>
                                                     </td>
                                                     <td className="text-muted-foreground px-3 py-2 text-xs whitespace-nowrap">
@@ -174,31 +219,6 @@ export default function Interviews({ initiative, canManage, codeFrequency, stats
                             Interview notes identify people, so only those running this initiative can read them. The counts and codes here are
                             shared.
                         </p>
-                    )}
-
-                    {canManage && openFollowUps && openFollowUps.length > 0 && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Open follow-ups</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <ul className="space-y-1.5 text-sm">
-                                    {openFollowUps.map((f) => (
-                                        <li key={f.id}>
-                                            <Link
-                                                href={route('initiatives.interviews.show', [initiative.id, f.interview_id])}
-                                                className="hover:underline"
-                                            >
-                                                {f.body}
-                                            </Link>
-                                            <span className="text-muted-foreground">
-                                                {f.owner && ` · ${f.owner}`} · from {f.participant}
-                                            </span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </CardContent>
-                        </Card>
                     )}
                 </div>
 

@@ -53,7 +53,9 @@ class InterviewController extends Controller
                 'status' => $i->status->value,
                 'counts' => collect(NoteKind::cases())->mapWithKeys(fn (NoteKind $k) => [$k->value => $i->notes->where('kind', $k)->count()]),
                 'codes' => $i->notes->flatMap->codes->pluck('name')->unique()->sort()->values(),
+                'note_count' => $i->notes->count(),
             ]) : null,
+            'tourSize' => $initiative->participants()->count(),
             'toInterview' => $canManage ? $initiative->participants()
                 ->whereDoesntHave('interview')
                 ->where('status', '!=', ParticipantStatus::Declined)

@@ -35,3 +35,24 @@ it('takes interview notes, codes them, sends a pain point to the friction log an
         ->and($note->fresh()->friction_point_id)->not->toBeNull()
         ->and($marta->fresh()->status->value)->toBe('interviewed');
 });
+
+it('asks before completing an interview with no notes and surfaces follow-ups', function () {
+    $initiative = larkspur();
+    $this->actingAs($initiative->owner);
+    $kenji = $initiative->participants()->where('name', 'Kenji Mori')->firstOrFail();
+    $interview = $initiative->interviews()->create(['participant_id' => $kenji->id, 'status' => 'draft']);
+
+    // Playwright dismisses confirm() dialogs, i.e. the user answers "Cancel".
+    visit(route('initiatives.interviews.show', [$initiative, $interview]))
+        ->assertSeeIn('@jump-follow_up', 'Follow-ups (0)')
+        ->click('@interview-complete')
+        ->assertSeeIn('@interview-status', 'Draft')
+        ->assertNoJavaScriptErrors();
+
+    expect($interview->fresh()->status->value)->toBe('draft')
+        ->and($kenji->fresh()->status->value)->toBe('candidate');
+
+    visit(route('initiatives.interviews', $initiative))
+        ->assertSeeIn('@open-follow-ups', 'Ask the platform team whether preview environments could be self-service.')
+        ->assertPresent('@follow-ups-tile');
+});

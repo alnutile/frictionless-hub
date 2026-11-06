@@ -88,6 +88,24 @@ export default function InterviewPage(props: Props) {
                 </div>
             </div>
 
+            <nav className="flex flex-wrap gap-1.5" aria-label="Jump to section" data-test="section-jump">
+                {kinds.map((kind) => {
+                    const items = notes.filter((n) => n.kind === kind.value);
+                    const open = kind.value === 'follow_up' ? items.filter((n) => !n.done).length : 0;
+                    return (
+                        <a
+                            key={kind.value}
+                            href={`#section-${kind.value}`}
+                            className="hover:bg-accent rounded-full border px-3 py-1 text-xs"
+                            data-test={`jump-${kind.value}`}
+                        >
+                            {kind.label} <span className="text-muted-foreground tabular-nums">({items.length})</span>
+                            {open > 0 && <span className="ml-1 text-amber-600 dark:text-amber-400">· {open} open</span>}
+                        </a>
+                    );
+                })}
+            </nav>
+
             <div className="grid gap-6 lg:grid-cols-3">
                 <div className="space-y-6 lg:col-span-2">
                     {kinds.map((kind) => (
@@ -110,14 +128,14 @@ export default function InterviewPage(props: Props) {
                             ))}
                         </CardContent>
                     </Card>
-                    <InterviewDetails initiativeId={initiative.id} interview={interview} />
+                    <InterviewDetails initiativeId={initiative.id} interview={interview} noteCount={notes.length} />
                 </div>
             </div>
         </InitiativeLayout>
     );
 }
 
-function InterviewDetails({ initiativeId, interview }: { initiativeId: number; interview: Props['interview'] }) {
+function InterviewDetails({ initiativeId, interview, noteCount }: { initiativeId: number; interview: Props['interview']; noteCount: number }) {
     const { data, setData, patch, transform, processing, errors, isDirty } = useForm({
         conducted_at: interview.conducted_at ?? '',
         status: interview.status,
@@ -127,6 +145,10 @@ function InterviewDetails({ initiativeId, interview }: { initiativeId: number; i
     });
 
     const save = (status?: 'draft' | 'complete') => {
+        // Themes are built from notes, so an empty "complete" interview quietly skews the data.
+        if (status === 'complete' && noteCount === 0 && !window.confirm('No notes yet. Mark this interview complete anyway?')) {
+            return;
+        }
         transform((current) => ({ ...current, status: status ?? current.status }));
         patch(route('initiatives.interviews.update', [initiativeId, interview.id]), { preserveScroll: true });
     };
@@ -207,7 +229,7 @@ function InterviewDetails({ initiativeId, interview }: { initiativeId: number; i
 
 function NoteSection({ initiative, interview, stages, codes, kind, notes }: Props & { kind: Option; notes: Note[] }) {
     return (
-        <Card data-test={`section-${kind.value}`}>
+        <Card id={`section-${kind.value}`} className="scroll-mt-4" data-test={`section-${kind.value}`}>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     {kind.label} <span className="text-muted-foreground text-sm font-normal">({notes.length})</span>
